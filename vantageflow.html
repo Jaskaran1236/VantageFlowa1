@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vantage Flow — Turn Your Website Into a Client Machine</title>
+  <meta name="description" content="We help local service businesses generate a consistent flow of bookings through high-converting websites and automation systems." />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: #0F172A; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: #0F172A; }
+    ::-webkit-scrollbar-thumb { background: #2563EB; border-radius: 2px; }
+    ::selection { background: rgba(37,99,235,0.35); }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(32px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+    @keyframes scaleIn  { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
+    @keyframes pulse    { 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(0.7); opacity:0.4; } }
+    @keyframes float    { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-12px); } }
+    @keyframes shimmer  { from { background-position:200% center; } to { background-position:-200% center; } }
+    @keyframes spin     { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    @keyframes slideIn  { from { opacity:0; transform:translateX(24px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes barGrow  { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+    @keyframes marquee  { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+    @keyframes countUp  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    input, textarea, select { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.25); }
+    .chat-input::placeholder { color: rgba(255,255,255,0.3); }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    /* ── TOKENS ── */
+    const C = {
+      ink:"#0F172A", blue:"#2563EB", blueL:"#3B82F6",
+      blueDim:"rgba(37,99,235,0.12)", blueGlow:"rgba(37,99,235,0.3)",
+      white:"#FFFFFF", muted:"#64748B", surface:"#111827",
+      surf2:"#1E293B", border:"rgba(255,255,255,0.07)", green:"#10B981",
+    };
+    const F = { display:"'Fraunces', Georgia, serif", body:"'Plus Jakarta Sans', sans-serif" };
+
+    /* ── REVEAL ── */
+    function Reveal({ children, delay=0, style={} }) {
+      const ref = useRef(null);
+      useEffect(() => {
+        const el = ref.current; if (!el) return;
+        const obs = new IntersectionObserver(([e]) => {
+          if (e.isIntersecting) { el.style.opacity="1"; el.style.transform="translateY(0)"; obs.disconnect(); }
+        }, { threshold:0.1 });
+        obs.observe(el); return () => obs.disconnect();
+      }, []);
+      return (
+        <div ref={ref} style={{ opacity:0, transform:"translateY(28px)", transition:`opacity .75s ${delay}s cubic-bezier(.22,1,.36,1), transform .75s ${delay}s cubic-bezier(.22,1,.36,1)`, ...style }}>
+          {children}
+        </div>
+      );
+    }
+
+    /* ── SHARED ── */
+    function Tag({ children }) {
+      return (
+        <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:C.blueDim, border:`1px solid rgba(37,99,235,0.25)`, borderRadius:100, padding:"6px 14px", marginBottom:20 }}>
+          <span style={{ width:6, height:6, borderRadius:"50%", background:C.blueL, display:"block", animation:"pulse 2s ease-in-out infinite" }}/>
+          <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.blueL, fontFamily:F.body }}>{children}</span>
+        </div>
+      );
+    }
+
+    function Btn({ children, variant="primary", onClick, style:extra={} }) {
+      const [hov, setHov] = useState(false);
+      const base = { display:"inline-flex", alignItems:"center", gap:8, border:"none", borderRadius:8, padding:"14px 28px", fontSize:15, fontWeight:700, fontFamily:F.body, cursor:"pointer", transition:"all 0.25s ease", ...extra };
+      const styles = {
+        primary:{ background:hov?"#1D4ED8":C.blue, color:C.white, boxShadow:hov?`0 10px 32px ${C.blueGlow}`:"none", transform:hov?"translateY(-2px)":"none" },
+        ghost:{ background:"transparent", color:C.white, border:`1px solid ${hov?"rgba(255,255,255,0.25)":C.border}`, transform:hov?"translateY(-2px)":"none" },
+        outline:{ background:"transparent", color:C.blue, border:`1px solid ${C.blue}`, transform:hov?"translateY(-2px)":"none", boxShadow:hov?`0 8px 24px ${C.blueGlow}`:"none" },
+      };
+      return <button style={{...base,...styles[variant]}} onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}>{children}</button>;
+    }
+
+    function SectionHeader({ tag, title, sub, center=false, maxWidth=640 }) {
+      return (
+        <div style={{ maxWidth, ...(center?{margin:"0 auto",textAlign:"center"}:{}), marginBottom:64 }}>
+          <Reveal><Tag>{tag}</Tag></Reveal>
+          <Reveal delay={0.1}><h2 style={{ fontFamily:F.display, fontSize:"clamp(34px,4vw,54px)", fontWeight:900, letterSpacing:"-0.03em", lineHeight:1.08, marginBottom:16, color:C.white }}>{title}</h2></Reveal>
+          {sub && <Reveal delay={0.2}><p style={{ fontSize:18, color:C.muted, lineHeight:1.75, fontWeight:300 }}>{sub}</p></Reveal>}
+        </div>
+      );
+    }
+
+    function Card({ children, style:extra={}, hover=true }) {
+      const [hov, setHov] = useState(false);
+      return (
+        <div onMouseEnter={()=>hover&&setHov(true)} onMouseLeave={()=>hover&&setHov(false)}
+          style={{ background:C.surface, border:`1px solid ${hov?"rgba(37,99,235,0.35)":C.border}`, borderRadius:20, transition:"all 0.3s ease", transform:hov?"translateY(-6px)":"none", boxShadow:hov?`0 24px 60px rgba(0,0,0,0.4)`:\"none\", ...extra }}>
+          {children}
+        </div>
+      );
+    }
+
+    const ArrowIcon = () => (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="8" x2="14" y2="8"/><polyline points="9 3 14 8 9 13"/>
+      </svg>
+    );
+
+    const CheckIcon = ({ color=C.green }) => (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink:0}}>
+        <circle cx="9" cy="9" r="8.5" fill={`${color}18`} stroke={color} strokeWidth="1"/>
+        <path d="M5.5 9l2.5 2.5 4.5-5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+
+    /* ── NAV ── */
+    function Nav({ page, setPage }) {
+      const [scrolled, setScrolled] = useState(false);
+      useEffect(() => {
+        const fn = () => setScrolled(window.scrollY > 40);
+        window.addEventListener("scroll", fn); return () => window.removeEventListener("scroll", fn);
+      }, []);
+      const links = [{ label:"Home",key:"home" },{ label:"Services",key:"services" },{ label:"About",key:"about" },{ label:"Pricing",key:"pricing" }];
+      return (
+        <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:900,padding:"0 32px",height:70,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(15,23,42,0.88)":"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${C.border}`:"1px solid transparent",transition:"all 0.35s ease" }}>
+          <button onClick={()=>{ setPage("home"); window.scrollTo(0,0); }} style={{ background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10 }}>
+            <div style={{ width:34,height:34,background:C.blue,borderRadius:8,display:"grid",placeItems:"center" }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="1.2"/>
+                <path d="M5 8L7 10L11 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span style={{ fontFamily:F.body,fontSize:18,fontWeight:800,color:C.white,letterSpacing:"-0.01em" }}>Vantage<span style={{ color:C.blue }}>Flow</span></span>
+          </button>
+          <div style={{ display:"flex",alignItems:"center",gap:28,flexWrap:"wrap" }}>
+            {links.map(l => (
+              <button key={l.key} onClick={()=>{ setPage(l.key); window.scrollTo(0,0); }} style={{ background:"none",border:"none",cursor:"pointer",fontSize:14,fontWeight:500,fontFamily:F.body,color:page===l.key?C.white:C.muted,transition:"color 0.2s" }}>{l.label}</button>
+            ))}
+            <button onClick={()=>{ setPage("home"); setTimeout(()=>document.getElementById("contact")?.scrollIntoView({behavior:"smooth"}),100); }}
+              style={{ background:C.blue,color:C.white,border:"none",borderRadius:8,padding:"10px 20px",fontSize:14,fontWeight:700,fontFamily:F.body,cursor:"pointer",transition:"all 0.2s" }}
+              onMouseOver={e=>{ e.target.style.transform="translateY(-2px)"; e.target.style.boxShadow=`0 8px 28px ${C.blueGlow}`; }}
+              onMouseOut={e=>{ e.target.style.transform="none"; e.target.style.boxShadow="none"; }}
+            >Get a Free Demo</button>
+          </div>
+        </nav>
+      );
+    }
+
+    /* ── HERO ── */
+    function HeroSection({ setPage }) {
+      const [count, setCount] = useState({ a:0,b:0,c:0 });
+      useEffect(() => {
+        const t = setTimeout(() => {
+          const animate = (key,end) => {
+            const dur=1800, start=Date.now();
+            const tick = () => {
+              const p = Math.min((Date.now()-start)/dur,1);
+              const ease = 1-Math.pow(1-p,3);
+              setCount(prev=>({...prev,[key]:Math.floor(ease*end)}));
+              if(p<1) requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          };
+          animate("a",3); animate("b",48); animate("c",100);
+        }, 600);
+        return ()=>clearTimeout(t);
+      }, []);
+
+      return (
+        <section style={{ minHeight:"100vh",display:"flex",alignItems:"center",padding:"130px 0 90px",position:"relative",overflow:"hidden" }}>
+          <div style={{ position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px)",backgroundSize:"60px 60px",maskImage:"radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent)",WebkitMaskImage:"radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent)" }} />
+          <div style={{ position:"absolute",top:"-10%",left:"50%",transform:"translateX(-50%)",width:900,height:600,background:"radial-gradient(ellipse, rgba(37,99,235,0.15) 0%, transparent 60%)",pointerEvents:"none" }} />
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px",width:"100%",position:"relative",zIndex:2 }}>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center" }}>
+              <div>
+                <Reveal>
+                  <div style={{ display:"inline-flex",alignItems:"center",gap:8,background:"rgba(16,185,129,0.1)",border:"1px solid rgba(16,185,129,0.25)",borderRadius:100,padding:"6px 14px",marginBottom:28 }}>
+                    <span style={{ width:6,height:6,borderRadius:"50%",background:C.green,animation:"pulse 2s infinite" }}/>
+                    <span style={{ fontSize:11,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:C.green,fontFamily:F.body }}>Now Accepting New Clients</span>
+                  </div>
+                </Reveal>
+                <Reveal delay={0.1}>
+                  <h1 style={{ fontFamily:F.display,fontSize:"clamp(42px,5vw,72px)",fontWeight:900,letterSpacing:"-0.03em",lineHeight:1.04,marginBottom:24 }}>
+                    Your Website Should Be<br/>
+                    <span style={{ color:C.blueL,fontStyle:"italic" }}>Bringing You Clients</span>
+                    <br/>— Not Losing Them
+                  </h1>
+                </Reveal>
+                <Reveal delay={0.2}>
+                  <p style={{ fontSize:19,color:C.muted,lineHeight:1.75,marginBottom:36,maxWidth:520,fontWeight:300 }}>
+                    We help local service businesses generate a consistent flow of bookings through high-converting websites and automation systems.
+                  </p>
+                </Reveal>
+                <Reveal delay={0.3}>
+                  <div style={{ display:"flex",gap:14,flexWrap:"wrap",marginBottom:28 }}>
+                    <Btn onClick={()=>document.getElementById("contact")?.scrollIntoView({behavior:"smooth"})}>Get a Free Demo <ArrowIcon/></Btn>
+                    <Btn variant="ghost" onClick={()=>setPage("pricing")}>View Pricing</Btn>
+                  </div>
+                </Reveal>
+                <Reveal delay={0.4}>
+                  <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L9.8 5.7H14.2L10.7 8.3L12 12.5L8 9.9L4 12.5L5.3 8.3L1.8 5.7H6.2L8 1.5Z" fill="#F59E0B"/></svg>
+                    <span style={{ fontSize:13,color:C.muted }}>No upfront risk — <span style={{ color:C.white,fontWeight:600 }}>only pay if you're happy</span></span>
+                  </div>
+                </Reveal>
+                <Reveal delay={0.5}>
+                  <div style={{ display:"flex",gap:40,marginTop:48,paddingTop:40,borderTop:`1px solid ${C.border}` }}>
+                    {[{val:`${count.a}×`,label:"Avg. booking increase"},{val:`${count.b}hr`,label:"Delivery time"},{val:`${count.c}%`,label:"Satisfaction rate"}].map((s,i) => (
+                      <div key={i}>
+                        <div style={{ fontFamily:F.display,fontSize:34,fontWeight:900,letterSpacing:"-0.04em" }}>{s.val}</div>
+                        <div style={{ fontSize:13,color:C.muted,marginTop:3 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Reveal>
+              </div>
+              <Reveal delay={0.3}><HeroDashboard/></Reveal>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function HeroDashboard() {
+      return (
+        <div style={{ position:"relative" }}>
+          <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:20,padding:28,boxShadow:"0 40px 80px rgba(0,0,0,0.5)",position:"relative",overflow:"hidden" }}>
+            <div style={{ position:"absolute",top:0,left:"20%",right:"20%",height:2,background:"linear-gradient(90deg, transparent, #2563EB, transparent)" }}/>
+            <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:24 }}>
+              {["#FF5F56","#FEBC2E","#27C840"].map(c=><div key={c} style={{ width:10,height:10,borderRadius:"50%",background:c }}/>)}
+              <div style={{ marginLeft:"auto",background:"rgba(255,255,255,0.05)",border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 12px",fontSize:11,color:C.muted }}>vantageflow.co/dashboard</div>
+            </div>
+            {[{icon:"📈",label:"Monthly Bookings",val:"312",change:"+148%",color:"#10B981"},{icon:"⚡",label:"Automated Leads",val:"94",change:"+73%",color:"#F59E0B"}].map((m,i) => (
+              <div key={i} style={{ background:C.surf2,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 18px",marginBottom:12,display:"flex",alignItems:"center",gap:14 }}>
+                <div style={{ width:38,height:38,borderRadius:10,background:C.blueDim,display:"grid",placeItems:"center",fontSize:16 }}>{m.icon}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:11,color:C.muted,marginBottom:3 }}>{m.label}</div>
+                  <div style={{ fontFamily:F.display,fontSize:22,fontWeight:700 }}>{m.val}</div>
+                </div>
+                <div style={{ fontSize:11,background:`${m.color}15`,color:m.color,borderRadius:100,padding:"3px 10px",fontWeight:600 }}>{m.change}</div>
+              </div>
+            ))}
+            <div style={{ marginTop:16 }}>
+              {[{label:"Conversion Rate",pct:74},{label:"Lead Capture",pct:68},{label:"Client Retention",pct:91}].map((b,i) => (
+                <div key={i} style={{ marginBottom:10 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",fontSize:12,color:C.muted,marginBottom:5 }}>
+                    <span>{b.label}</span><span style={{ color:C.white }}>{b.pct}%</span>
+                  </div>
+                  <div style={{ height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden" }}>
+                    <div style={{ height:"100%",width:`${b.pct}%`,background:`linear-gradient(90deg, ${C.blue}, ${C.blueL})`,borderRadius:3,transformOrigin:"left",animation:`barGrow 1.2s ${i*0.2}s ease forwards`,transform:"scaleX(0)" }}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {[{top:-16,right:-24,icon:"🗓️",title:"New Booking",sub:"Priya S. · 2 min ago",delay:"0s"},{bottom:20,left:-28,icon:"🤖",title:"Chatbot Active",sub:"8 leads captured today",delay:"2s"}].map((b,i) => (
+            <div key={i} style={{ position:"absolute",...(b.top!==undefined?{top:b.top}:{bottom:b.bottom}),...(b.right!==undefined?{right:b.right}:{left:b.left}),background:C.surf2,border:`1px solid ${C.border}`,borderRadius:12,padding:"11px 15px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 16px 36px rgba(0,0,0,0.4)",whiteSpace:"nowrap",animation:`float 4s ${b.delay} ease-in-out infinite` }}>
+              <span style={{ fontSize:18 }}>{b.icon}</span>
+              <div><div style={{ fontSize:12,fontWeight:600 }}>{b.title}</div><div style={{ fontSize:11,color:C.muted }}>{b.sub}</div></div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    /* ── TRUST STRIP ── */
+    function TrustStrip() {
+      const items = ["Barbershops","Hair Salons","Restaurants","Gyms","Dental Clinics","Beauty Spas","Tattoo Studios","Physiotherapy","Med Spas","Nail Studios"];
+      const doubled = [...items,...items];
+      return (
+        <div style={{ borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,padding:"32px 0",overflow:"hidden" }}>
+          <div style={{ fontSize:11,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:C.muted,textAlign:"center",marginBottom:20 }}>Trusted by local businesses across industries</div>
+          <div style={{ display:"flex",overflow:"hidden",maskImage:"linear-gradient(90deg, transparent, black 8%, black 92%, transparent)",WebkitMaskImage:"linear-gradient(90deg, transparent, black 8%, black 92%, transparent)" }}>
+            <div style={{ display:"flex",gap:56,animation:"marquee 24s linear infinite",flexShrink:0 }}>
+              {doubled.map((t,i) => <span key={i} style={{ fontSize:14,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:"rgba(255,255,255,0.15)",whiteSpace:"nowrap" }}>{t}</span>)}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── PROBLEM ── */
+    function ProblemSection() {
+      const problems = [
+        { icon:"🐌",num:"01",title:"Slow, Outdated Websites",body:"If your site takes more than 3 seconds to load, 53% of visitors leave. That's more than half your potential clients — gone before they read a word." },
+        { icon:"📅",num:"02",title:"No Clear Booking Journey",body:"Visitors who can't book instantly move on. No booking system means missed revenue every single hour your business is closed." },
+        { icon:"🚪",num:"03",title:"Visitors Leave Without Acting",body:"Without lead capture and follow-up automation, interested visitors simply disappear. You paid to get them there — and got nothing back." },
+      ];
+      return (
+        <section style={{ padding:"110px 0",background:C.surface }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <SectionHeader tag="The Problem" title="Most Local Businesses Are Losing Customers Every Day" sub="Your website might be live — but is it working? For most local businesses, the answer is no. Here's what's quietly costing you revenue." />
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2,border:`2px solid ${C.border}`,borderRadius:20,overflow:"hidden" }}>
+              {problems.map((p,i) => <Reveal delay={i*0.1} key={i}><ProblemCard {...p}/></Reveal>)}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function ProblemCard({ icon,num,title,body }) {
+      const [hov,setHov] = useState(false);
+      return (
+        <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+          style={{ background:hov?"rgba(15,23,42,0.5)":C.ink,padding:"44px 36px",transition:"background 0.3s",position:"relative",overflow:"hidden" }}>
+          <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg, transparent, ${C.blue}, transparent)`,opacity:hov?1:0,transition:"opacity 0.3s" }}/>
+          <div style={{ fontFamily:F.display,fontSize:60,fontWeight:900,color:"rgba(255,255,255,0.03)",lineHeight:1,marginBottom:14 }}>{num}</div>
+          <div style={{ fontSize:32,marginBottom:16 }}>{icon}</div>
+          <h3 style={{ fontSize:19,fontWeight:700,marginBottom:12 }}>{title}</h3>
+          <p style={{ fontSize:15,color:C.muted,lineHeight:1.75,fontWeight:300 }}>{body}</p>
+        </div>
+      );
+    }
+
+    /* ── SOLUTION ── */
+    function SolutionSection({ setPage }) {
+      const services = [
+        { num:"01",icon:"🖥️",title:"High-Converting Website Design",body:"Every page is engineered to guide visitors toward booking — fast, mobile-first, and built around how your local audience thinks.",features:["Mobile-first, sub-1s load speed","Conversion-focused layout & copy","SEO-ready architecture","Custom branding"] },
+        { num:"02",icon:"📆",title:"Booking System Integration",body:"Let clients book 24/7 without a single phone call. We install scheduling systems that sync with your calendar seamlessly.",features:["24/7 online booking","Automated confirmations & reminders","Calendar sync","No-show reduction"] },
+        { num:"03",icon:"🤖",title:"Automation & Lead Capture",body:"Capture every lead, follow up automatically, and re-engage cold prospects — all running behind the scenes.",features:["AI chatbot & instant replies","Email & SMS follow-up flows","Lead capture forms & popups","Re-engagement sequences"] },
+      ];
+      return (
+        <section style={{ padding:"110px 0" }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <SectionHeader tag="The Solution" title="We Build Systems That Turn Visitors Into Paying Clients" sub="This isn't just a website — it's a system designed to generate revenue. Everything we build has one job: get you more bookings." />
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24 }}>
+              {services.map((s,i) => (
+                <Reveal delay={i*0.1} key={i}>
+                  <Card style={{ padding:"40px 34px",height:"100%" }}>
+                    <span style={{ fontSize:11,fontWeight:700,letterSpacing:"0.14em",color:C.blue,textTransform:"uppercase",display:"block",marginBottom:20 }}>{s.num} / Service</span>
+                    <div style={{ fontSize:28,marginBottom:16 }}>{s.icon}</div>
+                    <h3 style={{ fontSize:20,fontWeight:700,marginBottom:12 }}>{s.title}</h3>
+                    <p style={{ fontSize:14,color:C.muted,lineHeight:1.75,marginBottom:20,fontWeight:300 }}>{s.body}</p>
+                    <ul style={{ listStyle:"none",display:"flex",flexDirection:"column",gap:8 }}>
+                      {s.features.map((f,j) => <li key={j} style={{ display:"flex",alignItems:"center",gap:10,fontSize:13,color:"rgba(255,255,255,0.7)" }}><CheckIcon/> {f}</li>)}
+                    </ul>
+                  </Card>
+                </Reveal>
+              ))}
+            </div>
+            <Reveal delay={0.3}>
+              <div style={{ textAlign:"center",marginTop:40 }}>
+                <p style={{ fontSize:14,color:C.muted,marginBottom:16,fontStyle:"italic" }}>"This isn't just a website — it's a system designed to generate revenue."</p>
+                <Btn onClick={()=>setPage("services")}>Explore All Services <ArrowIcon/></Btn>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── HOW IT WORKS ── */
+    function HowItWorks() {
+      const steps = [
+        { n:"01",title:"We Analyse Your Current Setup",body:"We audit your existing website — speed, structure, booking flow, and conversion leaks. You get a clear breakdown of what's holding you back.",time:"Day 1" },
+        { n:"02",title:"We Redesign for Conversions",body:"Our team rebuilds your site from the ground up with layouts and copy proven to turn local visitors into booked clients.",time:"Day 1–2" },
+        { n:"03",title:"We Implement Booking & Automation",body:"We integrate your booking system, set up automation flows, and hand you a fully operational client acquisition machine.",time:"Day 2–3" },
+      ];
+      return (
+        <section style={{ padding:"110px 0",background:C.surface }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"start" }}>
+              <div>
+                <SectionHeader tag="How It Works" title="Up and Running in 48 Hours" sub="We've stripped away every unnecessary step. From first call to live system — in under 48 hours."/>
+                {steps.map((s,i) => (
+                  <Reveal delay={i*0.12} key={i}>
+                    <div style={{ display:"flex",gap:20,padding:"28px 0",borderBottom:`1px solid ${C.border}` }}>
+                      <div style={{ width:46,height:46,borderRadius:12,background:C.surf2,border:`1px solid ${C.border}`,display:"grid",placeItems:"center",fontFamily:F.display,fontSize:14,fontWeight:900,color:C.muted,flexShrink:0 }}>{s.n}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
+                          <h3 style={{ fontSize:18,fontWeight:700,marginBottom:8,marginTop:8 }}>{s.title}</h3>
+                          <span style={{ fontSize:11,color:C.blue,background:C.blueDim,border:`1px solid rgba(37,99,235,0.2)`,borderRadius:100,padding:"3px 10px",whiteSpace:"nowrap",marginLeft:12,marginTop:8 }}>{s.time}</span>
+                        </div>
+                        <p style={{ fontSize:14,color:C.muted,lineHeight:1.75,fontWeight:300 }}>{s.body}</p>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+              <Reveal delay={0.2}>
+                <div style={{ position:"sticky",top:100 }}>
+                  <div style={{ background:C.ink,border:`1px solid ${C.border}`,borderRadius:20,padding:32,boxShadow:"0 40px 80px rgba(0,0,0,0.4)" }}>
+                    <div style={{ fontSize:11,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:C.muted,marginBottom:24 }}>Sample Project Timeline</div>
+                    {[{n:"1",label:"Discovery & Audit",s:"done"},{n:"2",label:"Design & Copywriting",s:"done"},{n:"3",label:"Development",s:"active"},{n:"4",label:"Booking System Setup",s:"queued"},{n:"5",label:"Automation & Launch",s:"queued"}].map((r,i,arr) => (
+                      <div key={i} style={{ display:"flex",alignItems:"center",gap:14,padding:"13px 0",borderBottom:i<arr.length-1?`1px solid ${C.border}`:"none" }}>
+                        <div style={{ width:30,height:30,borderRadius:8,background:r.s==="done"||r.s==="active"?C.blue:C.surf2,display:"grid",placeItems:"center",fontFamily:F.display,fontSize:12,fontWeight:700,flexShrink:0 }}>{r.n}</div>
+                        <span style={{ fontSize:13,fontWeight:500,flex:1 }}>{r.label}</span>
+                        <span style={{ fontSize:11,borderRadius:100,padding:"3px 10px",background:r.s==="done"?"rgba(16,185,129,0.1)":r.s==="active"?"rgba(37,99,235,0.12)":"rgba(255,255,255,0.05)",color:r.s==="done"?C.green:r.s==="active"?C.blueL:C.muted }}>{r.s==="done"?"✓ Done":r.s==="active"?"⬤ In Progress":"Queued"}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop:24,paddingTop:20,borderTop:`1px solid ${C.border}` }}>
+                      <div style={{ display:"flex",justifyContent:"space-between",fontSize:12,color:C.muted,marginBottom:8 }}><span>Progress</span><span>60%</span></div>
+                      <div style={{ height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden" }}>
+                        <div style={{ height:"100%",width:"60%",background:`linear-gradient(90deg,${C.blue},${C.blueL})`,borderRadius:3,transformOrigin:"left",animation:"barGrow 1.4s ease forwards" }}/>
+                      </div>
+                      <div style={{ fontSize:11,color:C.muted,marginTop:10 }}>⏱ Est. completion: 48 hrs</div>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── RESULTS ── */
+    function ResultsSection() {
+      return (
+        <section style={{ padding:"110px 0" }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <SectionHeader tag="The Results" center title="What You Can Expect" sub="Most businesses see a measurable increase in bookings within weeks." maxWidth={560}/>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:24 }}>
+              {[{icon:"📈",big:"3×",title:"More Bookings",body:"Clients consistently see a 3× increase in bookings within the first 60 days."},{icon:"💷",big:"+40%",title:"Increased Revenue",body:"More bookings + automated follow-ups = measurable revenue growth."},{icon:"🌐",big:"Top 3",title:"Better Online Presence",body:"SEO-optimised sites rank higher on Google, meaning more people find you."},{icon:"⚙️",big:"24/7",title:"Less Manual Work",body:"Automated confirmations and reminders run around the clock."}].map((r,i) => (
+                <Reveal delay={i*0.1} key={i}>
+                  <Card style={{ padding:"40px" }}>
+                    <div style={{ fontSize:28,marginBottom:16 }}>{r.icon}</div>
+                    <div style={{ fontFamily:F.display,fontSize:"clamp(44px,5vw,66px)",fontWeight:900,letterSpacing:"-0.04em",lineHeight:1,background:`linear-gradient(135deg,${C.white},${C.blueL})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",marginBottom:10 }}>{r.big}</div>
+                    <h3 style={{ fontSize:20,fontWeight:700,marginBottom:10 }}>{r.title}</h3>
+                    <p style={{ fontSize:14,color:C.muted,lineHeight:1.75,fontWeight:300 }}>{r.body}</p>
+                  </Card>
+                </Reveal>
+              ))}
+            </div>
+            <Reveal delay={0.3}>
+              <div style={{ textAlign:"center",marginTop:40,padding:"28px",background:C.surface,border:`1px solid rgba(37,99,235,0.2)`,borderRadius:16 }}>
+                <p style={{ fontSize:17,color:C.white,fontWeight:600 }}>💡 <span style={{ color:C.blueL }}>Most businesses see an increase in bookings within weeks</span> — not months.</p>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── OFFER ── */
+    function OfferSection() {
+      return (
+        <section style={{ padding:"110px 0",background:C.surface }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center" }}>
+              <div>
+                <Reveal><Tag>Risk-Free Offer</Tag></Reveal>
+                <Reveal delay={0.1}><h2 style={{ fontFamily:F.display,fontSize:"clamp(34px,4vw,52px)",fontWeight:900,letterSpacing:"-0.03em",lineHeight:1.08,marginBottom:20 }}>Try It <span style={{ color:C.blueL,fontStyle:"italic" }}>Risk-Free</span></h2></Reveal>
+                <Reveal delay={0.2}><p style={{ fontSize:18,color:C.muted,lineHeight:1.75,marginBottom:32,fontWeight:300 }}>We'll design a <strong style={{ color:C.white }}>free homepage demo</strong> for your business. If you love it — great. If not, you walk away without paying a single penny.</p></Reveal>
+                <Reveal delay={0.3}>
+                  <div style={{ display:"flex",flexDirection:"column",gap:14,marginBottom:36 }}>
+                    {["Free homepage demo — no commitment","No contracts, no hidden fees","Only pay when you're fully happy","Results visible within days of launch"].map((p,i) => (
+                      <div key={i} style={{ display:"flex",alignItems:"center",gap:12,fontSize:15,color:"rgba(255,255,255,0.85)" }}><CheckIcon/> {p}</div>
+                    ))}
+                  </div>
+                </Reveal>
+                <Reveal delay={0.4}><Btn onClick={()=>document.getElementById("contact")?.scrollIntoView({behavior:"smooth"})}>Claim Your Free Demo <ArrowIcon/></Btn></Reveal>
+              </div>
+              <Reveal delay={0.2}>
+                <div style={{ background:C.ink,border:`1px solid rgba(37,99,235,0.25)`,borderRadius:20,padding:40,position:"relative",overflow:"hidden" }}>
+                  <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${C.blue},transparent)` }}/>
+                  <div style={{ textAlign:"center",marginBottom:28 }}>
+                    <div style={{ fontSize:40,marginBottom:8 }}>🎯</div>
+                    <h3 style={{ fontFamily:F.display,fontSize:24,fontWeight:900,marginBottom:8 }}>Free Demo Build</h3>
+                    <p style={{ fontSize:14,color:C.muted }}>No cost. No commitment. No risk.</p>
+                  </div>
+                  {["Custom homepage designed for your business","Built around your services and audience","Delivered within 48 hours","Full walkthrough call included","Move forward only if you love it"].map((item,i) => (
+                    <div key={i} style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 0",borderBottom:i<4?`1px solid ${C.border}`:"none",fontSize:14,color:"rgba(255,255,255,0.8)" }}>
+                      <CheckIcon color={C.blueL}/> {item}
+                    </div>
+                  ))}
+                  <div style={{ marginTop:24,padding:16,background:C.blueDim,border:`1px solid rgba(37,99,235,0.2)`,borderRadius:12,textAlign:"center",fontSize:13,color:C.blueL,fontWeight:600 }}>⚡ Limited slots available each month</div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── PRICING ── */
+    function PricingSection() {
+      const plans = [
+        { name:"Starter Build",price:"£400",period:"one-time",tag:"Quick Start",color:C.muted,desc:"For small businesses wanting a clean, professional presence fast.",features:["1–3 page website","Mobile optimisation","Basic contact form","Clean, modern design"],monthly:null,cta:"Get Started" },
+        { name:"Growth System",price:"£600",period:"setup",tag:"⭐ Most Popular",color:C.blueL,featured:true,desc:"Our core offer. A full client acquisition system with ongoing management.",features:["Full high-converting website","Booking system integration","Basic automation (forms/chat)","Mobile optimisation","Website updates","Booking system management","Ongoing support"],monthly:"£75/month",cta:"Start Growing" },
+        { name:"Vantage Flow Pro",price:"£800",period:"setup",tag:"Premium",color:"#A78BFA",desc:"For ambitious businesses ready to scale with advanced automation.",features:["Everything in Growth System","Advanced automation","Lead tracking setup","Conversion optimisation","Performance improvements","Monthly optimisation","Priority support"],monthly:"£150/month",cta:"Go Pro" },
+      ];
+      return (
+        <section style={{ padding:"110px 0" }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <SectionHeader tag="Pricing" center title="Simple, Transparent Pricing" sub="No hidden fees. No lock-in. Choose the plan that fits — and scale when ready." maxWidth={560}/>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24,alignItems:"start" }}>
+              {plans.map((p,i) => (
+                <Reveal delay={i*0.1} key={i}>
+                  <PricingCard plan={p}/>
+                </Reveal>
+              ))}
+            </div>
+            <Reveal delay={0.3}>
+              <div style={{ textAlign:"center",marginTop:32,fontSize:14,color:C.muted }}>
+                All plans: <strong style={{ color:C.white }}>50% upfront / 50% on completion.</strong> Questions? <a href="mailto:vantageflowa@gmail.com" style={{ color:C.blueL,textDecoration:"none" }}>Email us</a>.
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      );
+    }
+
+    function PricingCard({ plan }) {
+      const [hov,setHov] = useState(false);
+      return (
+        <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+          style={{ background:plan.featured?`linear-gradient(160deg,rgba(37,99,235,0.18),${C.surface} 60%)`:C.surface,border:`1px solid ${plan.featured?"rgba(37,99,235,0.4)":hov?"rgba(37,99,235,0.25)":C.border}`,borderRadius:20,padding:36,position:"relative",overflow:"hidden",transition:"all 0.3s",transform:hov?"translateY(-6px)":"none",boxShadow:hov?"0 24px 60px rgba(0,0,0,0.4)":"none" }}>
+          {plan.featured && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${C.blue},transparent)` }}/>}
+          <div style={{ display:"inline-block",fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:plan.color,background:`${plan.color}15`,border:`1px solid ${plan.color}30`,borderRadius:100,padding:"4px 12px",marginBottom:20 }}>{plan.tag}</div>
+          <h3 style={{ fontSize:20,fontWeight:800,marginBottom:6 }}>{plan.name}</h3>
+          <p style={{ fontSize:13,color:C.muted,marginBottom:20,lineHeight:1.6,fontWeight:300 }}>{plan.desc}</p>
+          <div style={{ marginBottom:plan.monthly?4:24 }}>
+            <span style={{ fontFamily:F.display,fontSize:44,fontWeight:900,letterSpacing:"-0.04em" }}>{plan.price}</span>
+            <span style={{ fontSize:14,color:C.muted,marginLeft:6 }}>{plan.period}</span>
+          </div>
+          {plan.monthly && <div style={{ fontSize:13,color:C.muted,marginBottom:24 }}>then <strong style={{ color:C.white }}>{plan.monthly}</strong> ongoing</div>}
+          <div style={{ borderTop:`1px solid ${C.border}`,paddingTop:20,marginBottom:24 }}>
+            <ul style={{ listStyle:"none",display:"flex",flexDirection:"column",gap:10 }}>
+              {plan.features.map((f,i) => <li key={i} style={{ display:"flex",alignItems:"center",gap:10,fontSize:13,color:"rgba(255,255,255,0.75)" }}><CheckIcon color={plan.featured?C.blueL:C.green}/> {f}</li>)}
+            </ul>
+          </div>
+          <button onClick={()=>document.getElementById("contact")?.scrollIntoView({behavior:"smooth"})}
+            style={{ width:"100%",background:plan.featured?C.blue:"transparent",color:C.white,border:`1px solid ${plan.featured?C.blue:C.border}`,borderRadius:10,padding:"13px",fontSize:14,fontWeight:700,fontFamily:F.body,cursor:"pointer",transition:"all 0.25s",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
+            {plan.cta} <ArrowIcon/>
+          </button>
+        </div>
+      );
+    }
+
+    /* ── TESTIMONIALS ── */
+    function TestimonialsSection() {
+      const testi = [
+        { init:"MJ",color:"#1D4ED8",name:"Marcus J.",role:"Owner — Elite Cuts Barbershop",stars:5,text:"After working with Vantage Flow, we started getting significantly more bookings within weeks. The automated reminders alone cut our no-shows in half." },
+        { init:"SP",color:"#7C3AED",name:"Sarah P.",role:"Director — Bloom Beauty Salon",stars:5,text:"The booking system paid for itself in the first month. No more missed DMs or unanswered calls — clients just book themselves while we work." },
+        { init:"DK",color:"#0F766E",name:"Dr. D. Khan",role:"Principal — ClearSmile Dental",stars:5,text:"We went from 15 new patients a month to consistently over 40. The chatbot alone handles enquiries we used to reply to manually. Remarkable ROI." },
+      ];
+      return (
+        <section style={{ padding:"110px 0",background:C.surface }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <SectionHeader tag="Client Stories" center title="Businesses Already Running on Vantage Flow" sub="Real feedback from business owners who chose to stop leaving money on the table." maxWidth={560}/>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24 }}>
+              {testi.map((t,i) => (
+                <Reveal delay={i*0.1} key={i}>
+                  <div style={{ background:C.ink,border:`1px solid ${C.border}`,borderRadius:20,padding:36,position:"relative",overflow:"hidden",transition:"all 0.3s" }}>
+                    <div style={{ position:"absolute",top:16,right:24,fontFamily:"Georgia,serif",fontSize:90,color:"rgba(37,99,235,0.08)",lineHeight:1,userSelect:"none" }}>"</div>
+                    <div style={{ display:"flex",gap:3,marginBottom:18 }}>{Array(t.stars).fill(0).map((_,i)=><span key={i} style={{ color:"#F59E0B",fontSize:15 }}>★</span>)}</div>
+                    <p style={{ fontSize:14,color:"rgba(255,255,255,0.8)",lineHeight:1.8,fontStyle:"italic",marginBottom:24,fontWeight:300 }}>"{t.text}"</p>
+                    <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                      <div style={{ width:42,height:42,borderRadius:10,background:t.color,display:"grid",placeItems:"center",fontFamily:F.display,fontSize:14,fontWeight:900,flexShrink:0 }}>{t.init}</div>
+                      <div><div style={{ fontSize:14,fontWeight:700 }}>{t.name}</div><div style={{ fontSize:12,color:C.muted,marginTop:2 }}>{t.role}</div></div>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+            <Reveal delay={0.3}>
+              <div style={{ marginTop:56,background:C.ink,border:`1px solid ${C.border}`,borderRadius:20,padding:40,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:24 }}>
+                {[{big:"+247%",label:"Avg. booking increase"},{big:"48hr",label:"Average delivery time"},{big:"60%",label:"Reduction in no-shows"},{big:"4.9★",label:"Average client rating"}].map((s,i)=>(
+                  <div key={i} style={{ textAlign:"center",borderRight:i<3?`1px solid ${C.border}`:"none" }}>
+                    <div style={{ fontFamily:F.display,fontSize:"clamp(32px,3vw,44px)",fontWeight:900,letterSpacing:"-0.03em",color:C.blueL }}>{s.big}</div>
+                    <div style={{ fontSize:13,color:C.muted,marginTop:6 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── FINAL CTA ── */
+    function FinalCTA({ setPage }) {
+      return (
+        <section style={{ padding:"110px 0",position:"relative",overflow:"hidden" }}>
+          <div style={{ position:"absolute",inset:0,background:"radial-gradient(ellipse 70% 60% at 50% 50%, rgba(37,99,235,0.1), transparent)" }}/>
+          <div style={{ maxWidth:800,margin:"0 auto",padding:"0 32px",textAlign:"center",position:"relative",zIndex:2 }}>
+            <Reveal><Tag>Ready to Grow?</Tag></Reveal>
+            <Reveal delay={0.1}><h2 style={{ fontFamily:F.display,fontSize:"clamp(38px,5vw,64px)",fontWeight:900,letterSpacing:"-0.03em",lineHeight:1.06,marginBottom:20 }}>Ready to Turn Your Website<br/>Into a <span style={{ color:C.blueL,fontStyle:"italic" }}>Client Machine?</span></h2></Reveal>
+            <Reveal delay={0.2}><p style={{ fontSize:18,color:C.muted,lineHeight:1.75,marginBottom:40,fontWeight:300 }}>Let's build you a system that works for your business 24/7 — capturing leads, booking clients, and generating revenue while you focus on what you do best.</p></Reveal>
+            <Reveal delay={0.3}>
+              <div style={{ display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap" }}>
+                <Btn onClick={()=>document.getElementById("contact")?.scrollIntoView({behavior:"smooth"})}>Book a Call Today <ArrowIcon/></Btn>
+                <Btn variant="ghost" onClick={()=>setPage("pricing")}>View Pricing</Btn>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── CONTACT ── */
+    function ContactSection() {
+      const [form,setForm] = useState({ name:"",email:"",business:"",message:"" });
+      const [sent,setSent] = useState(false);
+      const [loading,setLoading] = useState(false);
+      const update = k => e => setForm(p=>({...p,[k]:e.target.value}));
+      const submit = () => {
+        if(!form.name||!form.email||!form.business) return;
+        setLoading(true);
+        setTimeout(()=>{ setLoading(false); setSent(true); },1400);
+      };
+      const iStyle = { background:C.surf2,border:`1px solid ${C.border}`,borderRadius:10,padding:"13px 16px",fontSize:15,color:C.white,outline:"none",width:"100%",transition:"border-color 0.2s",fontFamily:F.body };
+      return (
+        <section id="contact" style={{ padding:"110px 0",background:C.surface }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"start" }}>
+              <div>
+                <Reveal><Tag>Let's Talk</Tag></Reveal>
+                <Reveal delay={0.1}><h2 style={{ fontFamily:F.display,fontSize:"clamp(32px,3.5vw,48px)",fontWeight:900,letterSpacing:"-0.03em",lineHeight:1.08,marginBottom:16 }}>Start with a Free Demo — No Risk</h2></Reveal>
+                <Reveal delay={0.2}><p style={{ fontSize:17,color:C.muted,lineHeight:1.75,marginBottom:36,fontWeight:300 }}>Fill in the form and we'll get back to you within 2 hours with your free homepage demo and a clear plan.</p></Reveal>
+                <Reveal delay={0.3}>
+                  <div style={{ display:"flex",flexDirection:"column",gap:12,marginBottom:36 }}>
+                    {["Free homepage demo built for your business","Response within 2 hours","No hard sell — honest conversation","100% satisfaction guarantee"].map((p,i) => (
+                      <div key={i} style={{ display:"flex",alignItems:"center",gap:12,fontSize:14,color:"rgba(255,255,255,0.8)" }}><CheckIcon/> {p}</div>
+                    ))}
+                  </div>
+                </Reveal>
+                <Reveal delay={0.4}>
+                  <div style={{ background:C.ink,border:`1px solid ${C.border}`,borderRadius:14,padding:24 }}>
+                    <div style={{ fontSize:12,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.muted,marginBottom:12 }}>Or contact us directly</div>
+                    <a href="mailto:vantageflowa@gmail.com" style={{ display:"flex",alignItems:"center",gap:10,color:C.white,textDecoration:"none",fontSize:15,fontWeight:600 }}>
+                      <div style={{ width:36,height:36,borderRadius:8,background:C.blueDim,border:`1px solid rgba(37,99,235,0.2)`,display:"grid",placeItems:"center",fontSize:16 }}>✉️</div>
+                      vantageflowa@gmail.com
+                    </a>
+                  </div>
+                </Reveal>
+              </div>
+              <Reveal delay={0.2}>
+                <div style={{ background:C.ink,border:`1px solid ${C.border}`,borderRadius:24,padding:44,position:"relative",overflow:"hidden" }}>
+                  <div style={{ position:"absolute",top:0,left:"15%",right:"15%",height:2,background:`linear-gradient(90deg,transparent,${C.blue},transparent)` }}/>
+                  {!sent ? (
+                    <>
+                      <h3 style={{ fontSize:20,fontWeight:800,marginBottom:6 }}>Request a Free Demo</h3>
+                      <p style={{ fontSize:13,color:C.muted,marginBottom:28 }}>We'll get back to you within 2 hours.</p>
+                      {[{label:"Your Name",key:"name",placeholder:"John Smith",type:"text"},{label:"Email Address",key:"email",placeholder:"john@yourbusiness.com",type:"email"},{label:"Business Name",key:"business",placeholder:"e.g. Elite Cuts Barbershop",type:"text"}].map(f => (
+                        <div key={f.key} style={{ marginBottom:16 }}>
+                          <label style={{ fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.6)",letterSpacing:"0.05em",display:"block",marginBottom:7 }}>{f.label}</label>
+                          <input type={f.type} placeholder={f.placeholder} value={form[f.key]} onChange={update(f.key)} style={iStyle}
+                            onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=""}/>
+                        </div>
+                      ))}
+                      <div style={{ marginBottom:20 }}>
+                        <label style={{ fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.6)",letterSpacing:"0.05em",display:"block",marginBottom:7 }}>Your Goal</label>
+                        <textarea placeholder="e.g. I want more online bookings and a faster website..." value={form.message} onChange={update("message")}
+                          style={{ ...iStyle,resize:"vertical",minHeight:100 }}
+                          onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=""}/>
+                      </div>
+                      <button onClick={submit} disabled={loading}
+                        style={{ width:"100%",background:loading?C.surf2:C.blue,color:C.white,border:"none",borderRadius:10,padding:"15px",fontSize:15,fontWeight:700,fontFamily:F.body,cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"all 0.25s" }}>
+                        {loading ? <><span style={{ width:16,height:16,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"white",borderRadius:"50%",animation:"spin 0.7s linear infinite",display:"inline-block" }}/> Sending...</> : <>Send My Free Demo Request <ArrowIcon/></>}
+                      </button>
+                      <p style={{ fontSize:11,color:C.muted,textAlign:"center",marginTop:12 }}>🔒 Your information stays private and is never shared.</p>
+                    </>
+                  ) : (
+                    <div style={{ textAlign:"center",padding:"20px 0" }}>
+                      <div style={{ width:64,height:64,borderRadius:16,background:"rgba(16,185,129,0.1)",border:`1px solid rgba(16,185,129,0.3)`,display:"grid",placeItems:"center",margin:"0 auto 20px",fontSize:28 }}>✅</div>
+                      <h3 style={{ fontFamily:F.display,fontSize:26,fontWeight:900,marginBottom:12 }}>You're all set! 🎉</h3>
+                      <p style={{ fontSize:15,color:C.muted,lineHeight:1.75 }}>We'll reach out within 2 hours to <strong style={{ color:C.white }}>{form.email}</strong>.</p>
+                    </div>
+                  )}
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── SERVICES PAGE ── */
+    function ServicesPage() {
+      const services = [
+        { icon:"🖥️",title:"High-Converting Website Design",tagline:"Websites built to book clients, not just look good.",body:"Most websites are digital brochures. Ours are revenue engines. Every decision — layout, copy, colour, spacing — is made to turn visitors into booked clients.",includes:["Custom multi-page design","Mobile-first development","Sub-1s load speed","Conversion-focused layout","Compelling copywriting","SEO-ready structure","Google Analytics setup"] },
+        { icon:"📆",title:"Booking System Integration",tagline:"Let clients book 24/7 — with zero manual effort.",body:"Phone calls during business hours aren't a booking system. We integrate seamless scheduling that works around the clock, synced with your calendar.",includes:["24/7 online booking","Calendar integration","Automated confirmations","Appointment reminders","No-show follow-ups","Staff management","Mobile booking"] },
+        { icon:"🤖",title:"Automation & Lead Capture",tagline:"Your business on autopilot — even at 2am.",body:"Visitors who aren't ready today aren't lost — they're just not captured. We build flows that catch every lead and follow up automatically.",includes:["AI chatbot responses","Lead capture forms","Email automation","SMS follow-ups","Re-engagement campaigns","CRM tracking","Monthly reports"] },
+      ];
+      return (
+        <div style={{ paddingTop:100,animation:"fadeIn 0.4s ease" }}>
+          <section style={{ padding:"80px 0 60px" }}>
+            <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+              <SectionHeader tag="Our Services" title="Everything You Need to Go From Invisible to Fully Booked" sub="Three interlocking systems that create a consistent pipeline of clients." maxWidth={680}/>
+            </div>
+          </section>
+          {services.map((s,i) => (
+            <section key={i} style={{ padding:"60px 0",background:i%2===0?C.surface:C.ink }}>
+              <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center" }}>
+                  {i%2!==0 && <Reveal delay={0.1}><div style={{ background:C.surf2,border:`1px solid ${C.border}`,borderRadius:20,padding:40,textAlign:"center" }}><div style={{ fontSize:60,marginBottom:16,animation:"float 4s ease-in-out infinite" }}>{s.icon}</div><div style={{ fontFamily:F.display,fontSize:80,fontWeight:900,color:"rgba(37,99,235,0.08)" }}>0{i+1}</div></div></Reveal>}
+                  <Reveal>
+                    <div>
+                      <div style={{ fontSize:36,marginBottom:12 }}>{s.icon}</div>
+                      <h2 style={{ fontFamily:F.display,fontSize:"clamp(28px,3vw,42px)",fontWeight:900,letterSpacing:"-0.02em",marginBottom:10 }}>{s.title}</h2>
+                      <p style={{ fontSize:17,color:C.blueL,fontWeight:600,marginBottom:20 }}>{s.tagline}</p>
+                      <p style={{ fontSize:16,color:C.muted,lineHeight:1.8,marginBottom:28,fontWeight:300 }}>{s.body}</p>
+                      <ul style={{ listStyle:"none",display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
+                        {s.includes.map((f,j) => <li key={j} style={{ display:"flex",alignItems:"center",gap:8,fontSize:13,color:"rgba(255,255,255,0.75)" }}><CheckIcon color={C.blueL}/> {f}</li>)}
+                      </ul>
+                    </div>
+                  </Reveal>
+                  {i%2===0 && <Reveal delay={0.2}><div style={{ background:C.surf2,border:`1px solid ${C.border}`,borderRadius:20,padding:40,textAlign:"center" }}><div style={{ fontSize:60,marginBottom:16,animation:"float 4s ease-in-out infinite" }}>{s.icon}</div><div style={{ fontFamily:F.display,fontSize:80,fontWeight:900,color:"rgba(37,99,235,0.08)" }}>0{i+1}</div></div></Reveal>}
+                </div>
+              </div>
+            </section>
+          ))}
+        </div>
+      );
+    }
+
+    /* ── ABOUT PAGE ── */
+    function AboutPage() {
+      return (
+        <div style={{ paddingTop:100,animation:"fadeIn 0.4s ease" }}>
+          <section style={{ padding:"80px 0 60px" }}>
+            <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"center" }}>
+                <div>
+                  <Reveal><Tag>About Us</Tag></Reveal>
+                  <Reveal delay={0.1}><h1 style={{ fontFamily:F.display,fontSize:"clamp(36px,4vw,58px)",fontWeight:900,letterSpacing:"-0.03em",lineHeight:1.06,marginBottom:20 }}>We're Not a Web Agency.<br/><span style={{ color:C.blueL,fontStyle:"italic" }}>We're a Growth Partner.</span></h1></Reveal>
+                  <Reveal delay={0.2}><p style={{ fontSize:17,color:C.muted,lineHeight:1.8,marginBottom:20,fontWeight:300 }}>Vantage Flow was built because we saw the same problem over and over: great local businesses held back by outdated websites that were costing them clients every single day.</p></Reveal>
+                  <Reveal delay={0.3}><p style={{ fontSize:17,color:C.muted,lineHeight:1.8,fontWeight:300 }}>We specialise exclusively in local service businesses — which means we understand your audience, your booking patterns, and exactly what it takes to convert a visitor into a loyal client.</p></Reveal>
+                </div>
+                <Reveal delay={0.2}>
+                  <div style={{ background:C.surface,border:`1px solid ${C.border}`,borderRadius:20,padding:40 }}>
+                    <div style={{ fontFamily:F.display,fontSize:20,fontWeight:900,marginBottom:24,color:C.blueL,lineHeight:1.4 }}>"We don't just build websites — we build client acquisition systems."</div>
+                    {[{label:"Founded",val:"2024"},{label:"Clients Served",val:"40+"},{label:"Avg. Booking Increase",val:"3×"},{label:"Satisfaction Rate",val:"100%"}].map((s,i) => (
+                      <div key={i} style={{ display:"flex",justifyContent:"space-between",padding:"14px 0",borderBottom:i<3?`1px solid ${C.border}`:"none",fontSize:15 }}>
+                        <span style={{ color:C.muted }}>{s.label}</span><span style={{ fontWeight:700 }}>{s.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Reveal>
+              </div>
+            </div>
+          </section>
+          <section style={{ padding:"80px 0",background:C.surface }}>
+            <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+              <SectionHeader tag="Our Values" title="What Drives Everything We Build" maxWidth={560}/>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24 }}>
+                {[{icon:"🎯",title:"Results Over Aesthetics",body:"Beautiful design means nothing if it doesn't convert. We make every decision based on tested conversion principles."},{icon:"🤝",title:"Total Transparency",body:"No hidden fees, no jargon, no vague timelines. You always know exactly what we're building and when."},{icon:"⚡",title:"Speed Without Sacrifice",body:"48-hour delivery proves we respect your time. Every day without a working system is a day you're losing clients."}].map((v,i) => (
+                  <Reveal delay={i*0.1} key={i}>
+                    <Card style={{ padding:36 }}>
+                      <div style={{ fontSize:28,marginBottom:16 }}>{v.icon}</div>
+                      <h3 style={{ fontSize:18,fontWeight:700,marginBottom:10 }}>{v.title}</h3>
+                      <p style={{ fontSize:14,color:C.muted,lineHeight:1.75,fontWeight:300 }}>{v.body}</p>
+                    </Card>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+          <section style={{ padding:"80px 0" }}>
+            <div style={{ maxWidth:800,margin:"0 auto",padding:"0 32px",textAlign:"center" }}>
+              <Reveal><Tag>Get in Touch</Tag></Reveal>
+              <Reveal delay={0.1}><h2 style={{ fontFamily:F.display,fontSize:"clamp(30px,3.5vw,48px)",fontWeight:900,letterSpacing:"-0.03em",marginBottom:16 }}>Ready to Work Together?</h2></Reveal>
+              <Reveal delay={0.2}><p style={{ fontSize:17,color:C.muted,marginBottom:32,lineHeight:1.75,fontWeight:300 }}>Email us at <a href="mailto:vantageflowa@gmail.com" style={{ color:C.blueL,fontWeight:600,textDecoration:"none" }}>vantageflowa@gmail.com</a> or fill out the contact form to get started with a free demo.</p></Reveal>
+              <Reveal delay={0.3}><Btn onClick={()=>document.getElementById("contact")?.scrollIntoView({behavior:"smooth"})}>Book a Free Demo <ArrowIcon/></Btn></Reveal>
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    /* ── PRICING PAGE ── */
+    function FaqItem({ q,a }) {
+      const [open,setOpen] = useState(false);
+      return (
+        <div onClick={()=>setOpen(!open)} style={{ background:open?C.surface:C.ink,border:`1px solid ${open?"rgba(37,99,235,0.3)":C.border}`,borderRadius:12,padding:"20px 24px",cursor:"pointer",transition:"all 0.25s",marginBottom:2 }}>
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+            <span style={{ fontSize:15,fontWeight:600 }}>{q}</span>
+            <span style={{ fontSize:18,color:C.blueL,transform:open?"rotate(45deg)":"none",transition:"transform 0.25s" }}>+</span>
+          </div>
+          {open && <p style={{ fontSize:14,color:C.muted,lineHeight:1.75,marginTop:14,fontWeight:300 }}>{a}</p>}
+        </div>
+      );
+    }
+
+    function PricingPageFull() {
+      return (
+        <div style={{ paddingTop:100,animation:"fadeIn 0.4s ease" }}>
+          <section style={{ padding:"80px 0 0" }}>
+            <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+              <SectionHeader tag="Pricing" center title="Honest Pricing. No Surprises." sub="Pay when you're happy. Every plan starts with a risk-free demo." maxWidth={560}/>
+            </div>
+          </section>
+          <PricingSection/>
+          <section style={{ padding:"80px 0",background:C.surface }}>
+            <div style={{ maxWidth:900,margin:"0 auto",padding:"0 32px" }}>
+              <SectionHeader tag="FAQ" center title="Common Questions" maxWidth={500}/>
+              {[{q:"How does the payment structure work?",a:"All projects require 50% upfront to begin and 50% upon completion. Simple and fair for both sides."},{q:"What if I'm not happy with the result?",a:"You don't pay. We build your free homepage demo first — you only proceed if you're genuinely happy."},{q:"How quickly can you deliver?",a:"Most projects are live within 48 hours. Complex projects may take 3–5 days — we'll always give a clear timeline."},{q:"What's included in the monthly retainer?",a:"Monthly plans include website updates, booking system management, support, and continuous improvements."},{q:"Do you work with any type of local business?",a:"We specialise in barbershops, salons, restaurants, gyms, dental practices, physio clinics, tattoo studios, and more."}].map((f,i) => (
+                <Reveal delay={i*0.08} key={i}><FaqItem {...f}/></Reveal>
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    /* ── CHAT WIDGET ── */
+    function ChatWidget() {
+      const [open,setOpen] = useState(false);
+      const [messages,setMessages] = useState([{ from:"bot",text:"👋 Hey! I'm the Vantage Flow assistant. How can I help you today?" }]);
+      const [input,setInput] = useState("");
+      const [typing,setTyping] = useState(false);
+      const endRef = useRef(null);
+      const replies = {
+        pricing:"Our plans start at £400 one-time (Starter), £600+£75/mo (Growth System), and £800+£150/mo (Pro). We also offer a completely free demo first!",
+        booking:"We integrate booking systems that let clients book 24/7 — automated confirmations and reminders included!",
+        demo:"We'd love to build you a free homepage demo! Fill out the contact form and we'll get back within 2 hours. No commitment needed.",
+        time:"Most projects are live within 48 hours of kickoff.",
+        default:"Great question! Email us at vantageflowa@gmail.com or fill out the contact form and we'll respond within 2 hours. 🚀",
+      };
+      const send = () => {
+        if(!input.trim()) return;
+        const msg = input.toLowerCase();
+        setMessages(p=>[...p,{from:"user",text:input}]); setInput(""); setTyping(true);
+        const r = msg.includes("pric")||msg.includes("cost")||msg.includes("£")?replies.pricing:msg.includes("book")?replies.booking:msg.includes("demo")||msg.includes("free")?replies.demo:msg.includes("time")||msg.includes("48")?replies.time:replies.default;
+        setTimeout(()=>{ setTyping(false); setMessages(p=>[...p,{from:"bot",text:r}]); },1200);
+      };
+      useEffect(()=>{ endRef.current?.scrollIntoView({behavior:"smooth"}); },[messages,typing]);
+      return (
+        <div style={{ position:"fixed",bottom:28,right:28,zIndex:999 }}>
+          {open && (
+            <div style={{ width:320,background:C.surface,border:`1px solid ${C.border}`,borderRadius:20,boxShadow:"0 24px 60px rgba(0,0,0,0.6)",animation:"scaleIn 0.25s ease",transformOrigin:"bottom right",marginBottom:12,overflow:"hidden" }}>
+              <div style={{ background:`linear-gradient(135deg,${C.blue},#1D4ED8)`,padding:"16px 20px",display:"flex",alignItems:"center",gap:12 }}>
+                <div style={{ width:36,height:36,borderRadius:10,background:"rgba(255,255,255,0.2)",display:"grid",placeItems:"center",fontSize:18 }}>🤖</div>
+                <div><div style={{ fontSize:14,fontWeight:700 }}>Vantage Flow</div><div style={{ fontSize:11,opacity:0.8 }}>● Online now</div></div>
+                <button onClick={()=>setOpen(false)} style={{ marginLeft:"auto",background:"none",border:"none",color:"white",fontSize:20,cursor:"pointer" }}>×</button>
+              </div>
+              <div style={{ height:240,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:10 }}>
+                {messages.map((m,i) => (
+                  <div key={i} style={{ display:"flex",justifyContent:m.from==="user"?"flex-end":"flex-start" }}>
+                    <div style={{ maxWidth:"80%",background:m.from==="user"?C.blue:C.surf2,borderRadius:m.from==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px",padding:"10px 14px",fontSize:13,lineHeight:1.6 }}>{m.text}</div>
+                  </div>
+                ))}
+                {typing && <div style={{ display:"flex" }}><div style={{ background:C.surf2,borderRadius:"12px 12px 12px 4px",padding:"12px 16px",display:"flex",gap:5 }}>{[0,1,2].map(i=><span key={i} style={{ width:6,height:6,borderRadius:"50%",background:C.muted,animation:`pulse 1.2s ${i*0.2}s ease-in-out infinite`,display:"block" }}/>)}</div></div>}
+                <div ref={endRef}/>
+              </div>
+              <div style={{ padding:"12px 16px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10 }}>
+                <input className="chat-input" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Ask anything..."
+                  style={{ flex:1,background:C.surf2,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.white,outline:"none",fontFamily:F.body }}/>
+                <button onClick={send} style={{ background:C.blue,border:"none",borderRadius:8,width:36,height:36,display:"grid",placeItems:"center",cursor:"pointer" }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="13" x2="13" y2="1"/><polyline points="13 1 3 1 13 11"/></svg>
+                </button>
+              </div>
+              <div style={{ padding:"8px 16px 12px",fontSize:11,color:C.muted,textAlign:"center" }}>Or email <a href="mailto:vantageflowa@gmail.com" style={{ color:C.blueL,textDecoration:"none" }}>vantageflowa@gmail.com</a></div>
+            </div>
+          )}
+          <button onClick={()=>setOpen(!open)} style={{ width:56,height:56,borderRadius:16,background:open?C.surf2:C.blue,border:`1px solid ${open?C.border:"transparent"}`,display:"grid",placeItems:"center",cursor:"pointer",boxShadow:`0 8px 28px ${C.blueGlow}`,transition:"all 0.25s",fontSize:22 }}>
+            {open?"×":"💬"}
+          </button>
+          {!open && <div style={{ position:"absolute",top:-8,right:-6,width:18,height:18,borderRadius:"50%",background:"#EF4444",border:`2px solid ${C.ink}`,display:"grid",placeItems:"center",fontSize:10,fontWeight:700 }}>1</div>}
+        </div>
+      );
+    }
+
+    /* ── LEAD POPUP ── */
+    function LeadPopup() {
+      const [visible,setVisible] = useState(false);
+      const [dismissed,setDismissed] = useState(false);
+      const [email,setEmail] = useState("");
+      const [done,setDone] = useState(false);
+      useEffect(()=>{ if(dismissed) return; const t=setTimeout(()=>setVisible(true),5000); return()=>clearTimeout(t); },[dismissed]);
+      if(!visible||dismissed) return null;
+      const dismiss = () => { setVisible(false); setDismissed(true); };
+      const submit = () => { if(!email) return; setDone(true); setTimeout(dismiss,2000); };
+      return (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1100,display:"grid",placeItems:"center",animation:"fadeIn 0.3s ease",backdropFilter:"blur(4px)" }} onClick={dismiss}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:C.surface,border:`1px solid rgba(37,99,235,0.3)`,borderRadius:24,padding:48,maxWidth:460,width:"90%",position:"relative",animation:"scaleIn 0.3s ease",textAlign:"center",overflow:"hidden" }}>
+            <div style={{ position:"absolute",top:0,left:"15%",right:"15%",height:2,background:`linear-gradient(90deg,transparent,${C.blue},transparent)` }}/>
+            <button onClick={dismiss} style={{ position:"absolute",top:16,right:16,background:"none",border:"none",color:C.muted,fontSize:20,cursor:"pointer" }}>×</button>
+            {!done ? (
+              <>
+                <div style={{ fontSize:40,marginBottom:16 }}>🎁</div>
+                <h3 style={{ fontFamily:F.display,fontSize:26,fontWeight:900,marginBottom:10 }}>Get Your Free Website Audit</h3>
+                <p style={{ fontSize:14,color:C.muted,lineHeight:1.7,marginBottom:28,fontWeight:300 }}>Enter your email and we'll send you a free audit showing exactly what's costing you bookings.</p>
+                <div style={{ display:"flex",gap:10 }}>
+                  <input type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}
+                    style={{ flex:1,background:C.surf2,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 16px",fontSize:14,color:C.white,outline:"none",fontFamily:F.body }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=""}/>
+                  <button onClick={submit} style={{ background:C.blue,color:C.white,border:"none",borderRadius:10,padding:"12px 18px",fontSize:14,fontWeight:700,fontFamily:F.body,cursor:"pointer",whiteSpace:"nowrap" }}>Get Audit</button>
+                </div>
+                <p style={{ fontSize:11,color:C.muted,marginTop:14 }}>No spam. Response within 2 hours.</p>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize:40,marginBottom:16 }}>✅</div>
+                <h3 style={{ fontFamily:F.display,fontSize:22,fontWeight:900,marginBottom:8 }}>You're in!</h3>
+                <p style={{ fontSize:14,color:C.muted }}>We'll send your free audit to <strong style={{ color:C.white }}>{email}</strong> within 2 hours.</p>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ── FOOTER ── */
+    function Footer({ setPage }) {
+      return (
+        <footer style={{ borderTop:`1px solid ${C.border}`,padding:"48px 0" }}>
+          <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 32px" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,marginBottom:40,paddingBottom:40,borderBottom:`1px solid ${C.border}` }}>
+              <div>
+                <button onClick={()=>{ setPage("home"); window.scrollTo(0,0); }} style={{ background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10,marginBottom:16,padding:0 }}>
+                  <div style={{ width:30,height:30,background:C.blue,borderRadius:7,display:"grid",placeItems:"center" }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="1.2"/><path d="M5 8L7 10L11 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <span style={{ fontFamily:F.body,fontSize:17,fontWeight:800,color:C.white }}>Vantage<span style={{ color:C.blue }}>Flow</span></span>
+                </button>
+                <p style={{ fontSize:13,color:C.muted,lineHeight:1.75,maxWidth:240,fontWeight:300 }}>We build client acquisition systems for local service businesses.</p>
+                <a href="mailto:vantageflowa@gmail.com" style={{ fontSize:13,color:C.blueL,textDecoration:"none",display:"block",marginTop:12 }}>vantageflowa@gmail.com</a>
+              </div>
+              {[{label:"Company",links:[{t:"About",k:"about"},{t:"Services",k:"services"},{t:"Pricing",k:"pricing"}]},{label:"Services",links:[{t:"Web Design",k:"services"},{t:"Booking Systems",k:"services"},{t:"Automation",k:"services"}]},{label:"Start",links:[{t:"Free Demo",k:null},{t:"Book a Call",k:null},{t:"Contact",k:null}]}].map((col,i) => (
+                <div key={i}>
+                  <div style={{ fontSize:11,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:C.muted,marginBottom:16 }}>{col.label}</div>
+                  <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                    {col.links.map((l,j) => (
+                      <button key={j} onClick={()=>{ if(l.k){ setPage(l.k); window.scrollTo(0,0); } else document.getElementById("contact")?.scrollIntoView({behavior:"smooth"}); }}
+                        style={{ background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:13,textAlign:"left",padding:0,fontFamily:F.body }}
+                        onMouseOver={e=>e.target.style.color=C.white} onMouseOut={e=>e.target.style.color=C.muted}
+                      >{l.t}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12 }}>
+              <p style={{ fontSize:12,color:"rgba(255,255,255,0.25)" }}>© 2025 VantageFlow. All rights reserved.</p>
+              <p style={{ fontSize:12,color:"rgba(255,255,255,0.25)" }}>Built for local businesses that deserve better.</p>
+            </div>
+          </div>
+        </footer>
+      );
+    }
+
+    /* ── HOME PAGE ── */
+    function HomePage({ setPage }) {
+      return (
+        <div style={{ animation:"fadeIn 0.4s ease" }}>
+          <HeroSection setPage={setPage}/>
+          <TrustStrip/>
+          <ProblemSection/>
+          <SolutionSection setPage={setPage}/>
+          <HowItWorks/>
+          <ResultsSection/>
+          <OfferSection/>
+          <PricingSection/>
+          <TestimonialsSection/>
+          <FinalCTA setPage={setPage}/>
+          <ContactSection/>
+        </div>
+      );
+    }
+
+    /* ── APP ── */
+    function App() {
+      const [page,setPage] = useState("home");
+      const navigate = useCallback((p)=>{ setPage(p); window.scrollTo({top:0,behavior:"smooth"}); },[]);
+      const pages = { home:<HomePage setPage={navigate}/>, services:<ServicesPage/>, about:<AboutPage/>, pricing:<PricingPageFull/> };
+      return (
+        <>
+          <Nav page={page} setPage={navigate}/>
+          <main style={{ minHeight:"100vh" }}>{pages[page]||pages.home}</main>
+          <Footer setPage={navigate}/>
+          <ChatWidget/>
+          <LeadPopup/>
+        </>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App/>);
+  </script>
+</body>
+</html>
