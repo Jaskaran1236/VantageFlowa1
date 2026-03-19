@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vantage Flow — Turn Your Website Into a Client Machine</title>
+  <meta name="description" content="We help local service businesses generate a consistent flow of bookings through high-converting websites and automation systems."/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,900&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:#0F172A;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;overflow-x:hidden}
+    ::-webkit-scrollbar{width:3px}
+    ::-webkit-scrollbar-track{background:#0F172A}
+    ::-webkit-scrollbar-thumb{background:#2563EB;border-radius:2px}
+    ::selection{background:rgba(37,99,235,0.35)}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes scaleIn{from{opacity:0;transform:scale(0.93)}to{opacity:1;transform:scale(1)}}
+    @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(0.7);opacity:0.4}}
+    @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif!important}
+    input::placeholder,textarea::placeholder{color:rgba(255,255,255,0.25)}
+    #root{min-height:100vh}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const ink    = "#0F172A";
+const blue   = "#2563EB";
+const blueL  = "#3B82F6";
+const blueDim = "rgba(37,99,235,0.12)";
+const blueGlow = "rgba(37,99,235,0.3)";
+const white  = "#FFFFFF";
+const muted  = "#64748B";
+const surface = "#111827";
+const surf2  = "#1E293B";
+const border = "rgba(255,255,255,0.07)";
+const green  = "#10B981";
+const disp   = "'Fraunces', Georgia, serif";
+const body   = "'Plus Jakarta Sans', sans-serif";
+
+function Reveal({ children, delay=0 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { el.style.opacity="1"; el.style.transform="translateY(0)"; obs.disconnect(); }
+    }, { threshold: 0.08 });
+    obs.observe(el); return () => obs.disconnect();
+  }, []);
+  return (
+    <div ref={ref} style={{ opacity:0, transform:"translateY(24px)", transition:"opacity .7s "+delay+"s cubic-bezier(.22,1,.36,1), transform .7s "+delay+"s cubic-bezier(.22,1,.36,1)" }}>
+      {children}
+    </div>
+  );
+}
+
+function Tag({ children }) {
+  return (
+    <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:blueDim, border:"1px solid rgba(37,99,235,0.25)", borderRadius:100, padding:"6px 14px", marginBottom:20 }}>
+      <span style={{ width:6, height:6, borderRadius:"50%", background:blueL, display:"block", animation:"pulse 2s ease-in-out infinite" }}/>
+      <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:blueL, fontFamily:body }}>{children}</span>
+    </div>
+  );
+}
+
+function Btn({ children, variant, onClick }) {
+  const [hov, setHov] = useState(false);
+  variant = variant || "primary";
+  const base = { display:"inline-flex", alignItems:"center", gap:8, border:"none", borderRadius:8, padding:"14px 28px", fontSize:15, fontWeight:700, fontFamily:body, cursor:"pointer", transition:"all 0.25s ease" };
+  let extra = {};
+  if (variant === "primary") extra = { background: hov ? "#1D4ED8" : blue, color: white, boxShadow: hov ? "0 10px 32px "+blueGlow : "none", transform: hov ? "translateY(-2px)" : "none" };
+  if (variant === "ghost")   extra = { background: "transparent", color: white, border: "1px solid "+(hov ? "rgba(255,255,255,0.25)" : border), transform: hov ? "translateY(-2px)" : "none" };
+  return <button style={Object.assign({}, base, extra)} onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}>{children}</button>;
+}
+
+function SectionHeader({ tag, title, sub, center, maxWidth }) {
+  maxWidth = maxWidth || 640;
+  const wrap = { maxWidth: maxWidth, marginBottom: 64 };
+  if (center) { wrap.margin = "0 auto"; wrap.textAlign = "center"; wrap.marginBottom = 64; }
+  return (
+    <div style={wrap}>
+      <Reveal><Tag>{tag}</Tag></Reveal>
+      <Reveal delay={0.1}><h2 style={{ fontFamily:disp, fontSize:"clamp(34px,4vw,54px)", fontWeight:900, letterSpacing:"-0.03em", lineHeight:1.08, marginBottom:16, color:white }}>{title}</h2></Reveal>
+      {sub && <Reveal delay={0.2}><p style={{ fontSize:18, color:muted, lineHeight:1.75, fontWeight:300 }}>{sub}</p></Reveal>}
+    </div>
+  );
+}
+
+function Card({ children, extraStyle, noHover }) {
+  const [hov, setHov] = useState(false);
+  const s = { background:surface, border:"1px solid "+((!noHover && hov) ? "rgba(37,99,235,0.35)" : border), borderRadius:20, transition:"all 0.3s ease", transform:(!noHover && hov) ? "translateY(-5px)" : "none", boxShadow:(!noHover && hov) ? "0 24px 60px rgba(0,0,0,0.4)" : "none" };
+  return <div onMouseEnter={()=>!noHover&&setHov(true)} onMouseLeave={()=>!noHover&&setHov(false)} style={Object.assign({}, s, extraStyle)}>{children}</div>;
+}
+
+const Arrow = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="2" y1="8" x2="14" y2="8"/><polyline points="9 3 14 8 9 13"/>
+  </svg>
+);
+
+function Check({ col }) {
+  col = col || green;
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink:0}}>
+      <circle cx="9" cy="9" r="8.5" fill={col+"18"} stroke={col} strokeWidth="1"/>
+      <path d="M5.5 9l2.5 2.5 4.5-5" stroke={col} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+/* NAV */
+function Nav({ page, go }) {
+  const [sc, setSc] = useState(false);
+  useEffect(() => {
+    const fn = () => setSc(window.scrollY > 40);
+    window.addEventListener("scroll", fn); return () => window.removeEventListener("scroll", fn);
+  }, []);
+  return (
+    <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:900, padding:"0 32px", height:70, display:"flex", alignItems:"center", justifyContent:"space-between", background: sc ? "rgba(15,23,42,0.9)" : "transparent", backdropFilter: sc ? "blur(20px)" : "none", borderBottom: sc ? "1px solid "+border : "1px solid transparent", transition:"all 0.3s" }}>
+      <button onClick={()=>go("home")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+        <div style={{ width:34, height:34, background:blue, borderRadius:8, display:"grid", placeItems:"center" }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="1.2"/>
+            <path d="M5 8L7 10L11 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <span style={{ fontFamily:body, fontSize:18, fontWeight:800, color:white }}>Vantage<span style={{ color:blue }}>Flow</span></span>
+      </button>
+      <div style={{ display:"flex", alignItems:"center", gap:24, flexWrap:"wrap" }}>
+        {[["Home","home"],["Services","services"],["About","about"],["Pricing","pricing"]].map(([l,k]) => (
+          <button key={k} onClick={()=>go(k)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, fontWeight:500, fontFamily:body, color: page===k ? white : muted, transition:"color 0.2s" }}>{l}</button>
+        ))}
+        <button onClick={()=>{ go("home"); setTimeout(()=>document.getElementById("contact")&&document.getElementById("contact").scrollIntoView({behavior:"smooth"}),100); }}
+          style={{ background:blue, color:white, border:"none", borderRadius:8, padding:"10px 20px", fontSize:14, fontWeight:700, fontFamily:body, cursor:"pointer" }}>
+          Get a Free Demo
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+/* HERO */
+function Hero({ go }) {
+  const [n, setN] = useState({ a:0, b:0, c:0 });
+  useEffect(() => {
+    const t = setTimeout(() => {
+      [[" a",3],[" b",48],[" c",100]].forEach(([k,end]) => {
+        const start = Date.now(), dur = 1800;
+        const tick = () => {
+          const p = Math.min((Date.now()-start)/dur, 1);
+          const e = 1-Math.pow(1-p,3);
+          setN(prev => { const next = Object.assign({},prev); next[k.trim()] = Math.floor(e*end); return next; });
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    }, 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <section style={{ minHeight:"100vh", display:"flex", alignItems:"center", padding:"130px 0 90px", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px)", backgroundSize:"60px 60px", WebkitMaskImage:"radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent)", maskImage:"radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent)" }}/>
+      <div style={{ position:"absolute", top:"-10%", left:"50%", transform:"translateX(-50%)", width:900, height:600, background:"radial-gradient(ellipse, rgba(37,99,235,0.15) 0%, transparent 60%)", pointerEvents:"none" }}/>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px", width:"100%", position:"relative", zIndex:2 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:60, alignItems:"center" }}>
+          <div>
+            <Reveal>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)", borderRadius:100, padding:"6px 14px", marginBottom:28 }}>
+                <span style={{ width:6, height:6, borderRadius:"50%", background:green, animation:"pulse 2s infinite" }}/>
+                <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:green, fontFamily:body }}>Now Accepting New Clients</span>
+              </div>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <h1 style={{ fontFamily:disp, fontSize:"clamp(42px,5vw,70px)", fontWeight:900, letterSpacing:"-0.03em", lineHeight:1.05, marginBottom:24 }}>
+                Your Website Should Be<br/>
+                <span style={{ color:blueL, fontStyle:"italic" }}>Bringing You Clients</span><br/>
+                — Not Losing Them
+              </h1>
+            </Reveal>
+            <Reveal delay={0.2}>
+              <p style={{ fontSize:18, color:muted, lineHeight:1.75, marginBottom:36, maxWidth:500, fontWeight:300 }}>
+                We help local service businesses generate a consistent flow of bookings through high-converting websites and automation systems.
+              </p>
+            </Reveal>
+            <Reveal delay={0.3}>
+              <div style={{ display:"flex", gap:14, flexWrap:"wrap", marginBottom:24 }}>
+                <Btn onClick={()=>document.getElementById("contact")&&document.getElementById("contact").scrollIntoView({behavior:"smooth"})}>Get a Free Demo <Arrow/></Btn>
+                <Btn variant="ghost" onClick={()=>go("pricing")}>View Pricing</Btn>
+              </div>
+            </Reveal>
+            <Reveal delay={0.4}>
+              <p style={{ fontSize:13, color:muted }}>
+                <span style={{ color:"#F59E0B" }}>★</span> No upfront risk — <strong style={{ color:white }}>only pay if you're happy</strong>
+              </p>
+            </Reveal>
+            <Reveal delay={0.5}>
+              <div style={{ display:"flex", gap:40, marginTop:48, paddingTop:40, borderTop:"1px solid "+border }}>
+                {[[n.a+"×","Avg. booking increase"],[n.b+"hr","Delivery time"],[n.c+"%","Satisfaction rate"]].map(([v,l],i) => (
+                  <div key={i}>
+                    <div style={{ fontFamily:disp, fontSize:34, fontWeight:900, letterSpacing:"-0.04em" }}>{v}</div>
+                    <div style={{ fontSize:13, color:muted, marginTop:3 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+          <Reveal delay={0.3}><HeroDash/></Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HeroDash() {
+  return (
+    <div style={{ position:"relative" }}>
+      <div style={{ background:surface, border:"1px solid "+border, borderRadius:20, padding:28, boxShadow:"0 40px 80px rgba(0,0,0,0.5)", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:0, left:"20%", right:"20%", height:2, background:"linear-gradient(90deg, transparent, #2563EB, transparent)" }}/>
+        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:24 }}>
+          {["#FF5F56","#FEBC2E","#27C840"].map(c=><div key={c} style={{ width:10, height:10, borderRadius:"50%", background:c }}/>)}
+          <div style={{ marginLeft:"auto", background:"rgba(255,255,255,0.05)", border:"1px solid "+border, borderRadius:6, padding:"4px 12px", fontSize:11, color:muted }}>vantageflow.co/dashboard</div>
+        </div>
+        {[{icon:"📈",label:"Monthly Bookings",val:"312",change:"+148%",col:"#10B981"},{icon:"⚡",label:"Automated Leads",val:"94",change:"+73%",col:"#F59E0B"}].map((m,i)=>(
+          <div key={i} style={{ background:surf2, border:"1px solid "+border, borderRadius:12, padding:"16px 18px", marginBottom:12, display:"flex", alignItems:"center", gap:14 }}>
+            <div style={{ width:38, height:38, borderRadius:10, background:blueDim, display:"grid", placeItems:"center", fontSize:16 }}>{m.icon}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:11, color:muted, marginBottom:3 }}>{m.label}</div>
+              <div style={{ fontFamily:disp, fontSize:22, fontWeight:700 }}>{m.val}</div>
+            </div>
+            <div style={{ fontSize:11, background:m.col+"18", color:m.col, borderRadius:100, padding:"3px 10px", fontWeight:600 }}>{m.change}</div>
+          </div>
+        ))}
+        <div style={{ marginTop:12 }}>
+          {[["Conversion Rate",74],["Lead Capture",68],["Retention",91]].map(([l,p],i)=>(
+            <div key={i} style={{ marginBottom:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:muted, marginBottom:5 }}><span>{l}</span><span style={{ color:white }}>{p}%</span></div>
+              <div style={{ height:5, background:"rgba(255,255,255,0.06)", borderRadius:3, overflow:"hidden" }}>
+                <div style={{ height:"100%", width:p+"%", background:"linear-gradient(90deg,"+blue+","+blueL+")", borderRadius:3, transformOrigin:"left", animation:"barGrow 1.2s "+(i*0.2)+"s ease forwards", transform:"scaleX(0)" }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {[{t:-16,r:-24,icon:"🗓️",title:"New Booking",sub:"Priya S. · 2 min ago",d:"0s"},{b:20,l:-28,icon:"🤖",title:"Chatbot Active",sub:"8 leads today",d:"2s"}].map((b,i)=>(
+        <div key={i} style={{ position:"absolute", ...(b.t!==undefined?{top:b.t}:{bottom:b.b}), ...(b.r!==undefined?{right:b.r}:{left:b.l}), background:surf2, border:"1px solid "+border, borderRadius:12, padding:"11px 15px", display:"flex", alignItems:"center", gap:10, boxShadow:"0 16px 36px rgba(0,0,0,0.4)", whiteSpace:"nowrap", animation:"floatY 4s "+b.d+" ease-in-out infinite" }}>
+          <span style={{ fontSize:18 }}>{b.icon}</span>
+          <div><div style={{ fontSize:12, fontWeight:600 }}>{b.title}</div><div style={{ fontSize:11, color:muted }}>{b.sub}</div></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrustStrip() {
+  const items = ["Barbershops","Hair Salons","Restaurants","Gyms","Dental Clinics","Beauty Spas","Tattoo Studios","Physiotherapy","Med Spas","Nail Studios"];
+  const doubled = [...items,...items];
+  return (
+    <div style={{ borderTop:"1px solid "+border, borderBottom:"1px solid "+border, padding:"32px 0", overflow:"hidden" }}>
+      <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:muted, textAlign:"center", marginBottom:20 }}>Trusted by local businesses across industries</div>
+      <div style={{ display:"flex", overflow:"hidden", WebkitMaskImage:"linear-gradient(90deg,transparent,black 8%,black 92%,transparent)", maskImage:"linear-gradient(90deg,transparent,black 8%,black 92%,transparent)" }}>
+        <div style={{ display:"flex", gap:56, animation:"marquee 24s linear infinite", flexShrink:0 }}>
+          {doubled.map((t,i)=><span key={i} style={{ fontSize:14, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"rgba(255,255,255,0.15)", whiteSpace:"nowrap" }}>{t}</span>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Problem() {
+  const items = [
+    {icon:"🐌",n:"01",title:"Slow, Outdated Websites",body:"If your site takes more than 3 seconds to load, 53% of visitors leave. That's more than half your potential clients — gone before they read a word."},
+    {icon:"📅",n:"02",title:"No Clear Booking Journey",body:"Visitors who can't book instantly move on. No booking system means missed revenue every single hour your business is closed."},
+    {icon:"🚪",n:"03",title:"Visitors Leave Without Acting",body:"Without lead capture and follow-up automation, interested visitors simply disappear. You paid to get them there — and got nothing back."},
+  ];
+  return (
+    <section style={{ padding:"110px 0", background:surface }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <SectionHeader tag="The Problem" title="Most Local Businesses Are Losing Customers Every Day" sub="Your website might be live — but is it working? For most local businesses, the answer is no."/>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:2, border:"2px solid "+border, borderRadius:20, overflow:"hidden" }}>
+          {items.map((p,i)=>(
+            <Reveal delay={i*0.1} key={i}>
+              <ProbCard {...p}/>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProbCard({ icon, n, title, body }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{ background: hov ? "rgba(15,23,42,0.5)" : ink, padding:"44px 36px", transition:"background 0.3s", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,"+blue+",transparent)", opacity: hov ? 1 : 0, transition:"opacity 0.3s" }}/>
+      <div style={{ fontFamily:disp, fontSize:60, fontWeight:900, color:"rgba(255,255,255,0.03)", lineHeight:1, marginBottom:14 }}>{n}</div>
+      <div style={{ fontSize:32, marginBottom:16 }}>{icon}</div>
+      <h3 style={{ fontSize:19, fontWeight:700, marginBottom:12 }}>{title}</h3>
+      <p style={{ fontSize:15, color:muted, lineHeight:1.75, fontWeight:300 }}>{body}</p>
+    </div>
+  );
+}
+
+function Solution({ go }) {
+  const svcs = [
+    {n:"01",icon:"🖥️",title:"High-Converting Website Design",body:"Every page engineered to guide visitors toward booking — fast, mobile-first, built around your local audience.",feats:["Mobile-first, sub-1s speed","Conversion-focused layout","SEO-ready architecture","Custom branding"]},
+    {n:"02",icon:"📆",title:"Booking System Integration",body:"Let clients book 24/7 without a single phone call. Systems that sync with your calendar seamlessly.",feats:["24/7 online booking","Automated reminders","Calendar sync","No-show reduction"]},
+    {n:"03",icon:"🤖",title:"Automation and Lead Capture",body:"Capture every lead, follow up automatically, re-engage cold prospects — all behind the scenes.",feats:["AI chatbot responses","Email and SMS flows","Lead capture popups","Re-engagement sequences"]},
+  ];
+  return (
+    <section style={{ padding:"110px 0" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <SectionHeader tag="The Solution" title="We Build Systems That Turn Visitors Into Paying Clients" sub="This isn't just a website — it's a system designed to generate revenue. Everything we build has one job: get you more bookings."/>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
+          {svcs.map((s,i)=>(
+            <Reveal delay={i*0.1} key={i}>
+              <Card extraStyle={{ padding:"40px 34px", height:"100%" }}>
+                <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.14em", color:blue, textTransform:"uppercase", display:"block", marginBottom:20 }}>{s.n} / Service</span>
+                <div style={{ fontSize:28, marginBottom:16 }}>{s.icon}</div>
+                <h3 style={{ fontSize:20, fontWeight:700, marginBottom:12 }}>{s.title}</h3>
+                <p style={{ fontSize:14, color:muted, lineHeight:1.75, marginBottom:20, fontWeight:300 }}>{s.body}</p>
+                <ul style={{ listStyle:"none", display:"flex", flexDirection:"column", gap:8 }}>
+                  {s.feats.map((f,j)=><li key={j} style={{ display:"flex", alignItems:"center", gap:10, fontSize:13, color:"rgba(255,255,255,0.7)" }}><Check/> {f}</li>)}
+                </ul>
+              </Card>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={0.3}>
+          <div style={{ textAlign:"center", marginTop:40 }}>
+            <p style={{ fontSize:14, color:muted, marginBottom:16, fontStyle:"italic" }}>"This isn't just a website — it's a system designed to generate revenue."</p>
+            <Btn onClick={()=>go("services")}>Explore All Services <Arrow/></Btn>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorks() {
+  const steps = [
+    {n:"01",title:"We Analyse Your Current Setup",body:"We audit your existing website — speed, structure, booking flow, conversion leaks. You get a clear breakdown of what's holding you back.",time:"Day 1"},
+    {n:"02",title:"We Redesign for Conversions",body:"Our team rebuilds your site from the ground up with layouts and copy proven to turn local visitors into booked clients.",time:"Day 1-2"},
+    {n:"03",title:"We Implement Booking and Automation",body:"We integrate your booking system, set up automation flows, and hand you a fully operational client acquisition machine.",time:"Day 2-3"},
+  ];
+  return (
+    <section style={{ padding:"110px 0", background:surface }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"start" }}>
+          <div>
+            <SectionHeader tag="How It Works" title="Up and Running in 48 Hours" sub="From first call to live system — in under 48 hours."/>
+            {steps.map((s,i)=>(
+              <Reveal delay={i*0.12} key={i}>
+                <div style={{ display:"flex", gap:20, padding:"28px 0", borderBottom:"1px solid "+border }}>
+                  <div style={{ width:46, height:46, borderRadius:12, background:surf2, border:"1px solid "+border, display:"grid", placeItems:"center", fontFamily:disp, fontSize:14, fontWeight:900, color:muted, flexShrink:0 }}>{s.n}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                      <h3 style={{ fontSize:18, fontWeight:700, marginBottom:8, marginTop:8 }}>{s.title}</h3>
+                      <span style={{ fontSize:11, color:blue, background:blueDim, border:"1px solid rgba(37,99,235,0.2)", borderRadius:100, padding:"3px 10px", whiteSpace:"nowrap", marginLeft:12, marginTop:8 }}>{s.time}</span>
+                    </div>
+                    <p style={{ fontSize:14, color:muted, lineHeight:1.75, fontWeight:300 }}>{s.body}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.2}>
+            <div style={{ position:"sticky", top:100, background:ink, border:"1px solid "+border, borderRadius:20, padding:32, boxShadow:"0 40px 80px rgba(0,0,0,0.4)" }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:muted, marginBottom:24 }}>Sample Project Timeline</div>
+              {[["1","Discovery and Audit","done"],["2","Design and Copywriting","done"],["3","Development","active"],["4","Booking System Setup","q"],["5","Automation and Launch","q"]].map(([n,l,st],i,arr)=>(
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 0", borderBottom: i<arr.length-1 ? "1px solid "+border : "none" }}>
+                  <div style={{ width:30, height:30, borderRadius:8, background: st==="done"||st==="active" ? blue : surf2, display:"grid", placeItems:"center", fontFamily:disp, fontSize:12, fontWeight:700, flexShrink:0 }}>{n}</div>
+                  <span style={{ fontSize:13, fontWeight:500, flex:1 }}>{l}</span>
+                  <span style={{ fontSize:11, borderRadius:100, padding:"3px 10px", background: st==="done"?"rgba(16,185,129,0.1)":st==="active"?"rgba(37,99,235,0.12)":"rgba(255,255,255,0.05)", color: st==="done"?green:st==="active"?blueL:muted }}>
+                    {st==="done" ? "Done" : st==="active" ? "In Progress" : "Queued"}
+                  </span>
+                </div>
+              ))}
+              <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid "+border }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:muted, marginBottom:8 }}><span>Progress</span><span>60%</span></div>
+                <div style={{ height:5, background:"rgba(255,255,255,0.06)", borderRadius:3, overflow:"hidden" }}>
+                  <div style={{ height:"100%", width:"60%", background:"linear-gradient(90deg,"+blue+","+blueL+")", borderRadius:3, transformOrigin:"left", animation:"barGrow 1.4s ease forwards" }}/>
+                </div>
+                <div style={{ fontSize:11, color:muted, marginTop:10 }}>Est. completion: 48 hrs</div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Results() {
+  const items = [
+    {icon:"📈",big:"3x",title:"More Bookings",body:"Clients consistently see a 3x increase in bookings within the first 60 days of going live."},
+    {icon:"💷",big:"+40%",title:"Increased Revenue",body:"More bookings and automated follow-ups equals measurable revenue growth without extra effort."},
+    {icon:"🌐",big:"Top 3",title:"Better Online Presence",body:"SEO-optimised sites rank higher on Google, meaning more people find you first."},
+    {icon:"⚙️",big:"24/7",title:"Less Manual Work",body:"Automated confirmations, reminders, and follow-ups run around the clock so you don't have to."},
+  ];
+  return (
+    <section style={{ padding:"110px 0" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <SectionHeader tag="The Results" center={true} title="What You Can Expect" sub="Most businesses see a measurable increase in bookings within weeks." maxWidth={560}/>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:24 }}>
+          {items.map((r,i)=>(
+            <Reveal delay={i*0.1} key={i}>
+              <Card extraStyle={{ padding:"40px" }}>
+                <div style={{ fontSize:28, marginBottom:16 }}>{r.icon}</div>
+                <div style={{ fontFamily:disp, fontSize:"clamp(44px,5vw,66px)", fontWeight:900, letterSpacing:"-0.04em", lineHeight:1, background:"linear-gradient(135deg,"+white+","+blueL+")", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", marginBottom:10 }}>{r.big}</div>
+                <h3 style={{ fontSize:20, fontWeight:700, marginBottom:10 }}>{r.title}</h3>
+                <p style={{ fontSize:14, color:muted, lineHeight:1.75, fontWeight:300 }}>{r.body}</p>
+              </Card>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={0.3}>
+          <div style={{ textAlign:"center", marginTop:40, padding:"28px", background:surface, border:"1px solid rgba(37,99,235,0.2)", borderRadius:16 }}>
+            <p style={{ fontSize:17, color:white, fontWeight:600 }}>Most businesses see an increase in bookings within <span style={{ color:blueL }}>weeks, not months.</span></p>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function Offer() {
+  const perks = ["Free homepage demo — no commitment","No contracts, no hidden fees","Only pay when you're fully happy","Results visible within days of launch"];
+  const demoItems = ["Custom homepage for your business","Built around your services","Delivered within 48 hours","Full walkthrough call included","Move forward only if you love it"];
+  return (
+    <section style={{ padding:"110px 0", background:surface }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:60, alignItems:"center" }}>
+          <div>
+            <Reveal><Tag>Risk-Free Offer</Tag></Reveal>
+            <Reveal delay={0.1}><h2 style={{ fontFamily:disp, fontSize:"clamp(34px,4vw,52px)", fontWeight:900, letterSpacing:"-0.03em", lineHeight:1.08, marginBottom:20 }}>Try It <span style={{ color:blueL, fontStyle:"italic" }}>Risk-Free</span></h2></Reveal>
+            <Reveal delay={0.2}><p style={{ fontSize:18, color:muted, lineHeight:1.75, marginBottom:32, fontWeight:300 }}>We'll design a <strong style={{ color:white }}>free homepage demo</strong> for your business. If you love it — great. If not, you walk away without paying a penny.</p></Reveal>
+            <Reveal delay={0.3}>
+              <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:36 }}>
+                {perks.map((p,i)=><div key={i} style={{ display:"flex", alignItems:"center", gap:12, fontSize:15, color:"rgba(255,255,255,0.85)" }}><Check/> {p}</div>)}
+              </div>
+            </Reveal>
+            <Reveal delay={0.4}><Btn onClick={()=>document.getElementById("contact")&&document.getElementById("contact").scrollIntoView({behavior:"smooth"})}>Claim Your Free Demo <Arrow/></Btn></Reveal>
+          </div>
+          <Reveal delay={0.2}>
+            <div style={{ background:ink, border:"1px solid rgba(37,99,235,0.25)", borderRadius:20, padding:40, position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,"+blue+",transparent)" }}/>
+              <div style={{ textAlign:"center", marginBottom:28 }}>
+                <div style={{ fontSize:40, marginBottom:8 }}>🎯</div>
+                <h3 style={{ fontFamily:disp, fontSize:24, fontWeight:900, marginBottom:8 }}>Free Demo Build</h3>
+                <p style={{ fontSize:14, color:muted }}>No cost. No commitment. No risk.</p>
+              </div>
+              {demoItems.map((item,i)=>(
+                <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"12px 0", borderBottom: i<demoItems.length-1 ? "1px solid "+border : "none", fontSize:14, color:"rgba(255,255,255,0.8)" }}>
+                  <Check col={blueL}/> {item}
+                </div>
+              ))}
+              <div style={{ marginTop:24, padding:16, background:blueDim, border:"1px solid rgba(37,99,235,0.2)", borderRadius:12, textAlign:"center", fontSize:13, color:blueL, fontWeight:600 }}>Limited slots available each month</div>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Pricing() {
+  const plans = [
+    { name:"Starter Build", price:"£400", period:"one-time", tag:"Quick Start", tagCol:muted, desc:"For small businesses wanting a clean, professional presence fast.", feats:["1-3 page website","Mobile optimisation","Basic contact form","Clean, modern design"], monthly:null, cta:"Get Started" },
+    { name:"Growth System", price:"£600", period:"setup", tag:"Most Popular", tagCol:blueL, featured:true, desc:"A full client acquisition system with ongoing management.", feats:["Full high-converting website","Booking system integration","Basic automation","Mobile optimisation","Website updates","Ongoing support"], monthly:"£75/month", cta:"Start Growing" },
+    { name:"Vantage Flow Pro", price:"£800", period:"setup", tag:"Premium", tagCol:"#A78BFA", desc:"For ambitious businesses ready to scale with advanced automation.", feats:["Everything in Growth System","Advanced automation","Lead tracking","Conversion optimisation","Monthly optimisation","Priority support"], monthly:"£150/month", cta:"Go Pro" },
+  ];
+  return (
+    <section style={{ padding:"110px 0" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <SectionHeader tag="Pricing" center={true} title="Simple, Transparent Pricing" sub="No hidden fees. No lock-in. Choose the plan that fits and scale when ready." maxWidth={560}/>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24, alignItems:"start" }}>
+          {plans.map((p,i)=>(
+            <Reveal delay={i*0.1} key={i}>
+              <PricingCard plan={p}/>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={0.3}>
+          <div style={{ textAlign:"center", marginTop:32, fontSize:14, color:muted }}>
+            All plans: <strong style={{ color:white }}>50% upfront / 50% on completion.</strong> Questions? <a href="mailto:vantageflowa@gmail.com" style={{ color:blueL, textDecoration:"none" }}>Email us</a>.
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function PricingCard({ plan }) {
+  const [hov, setHov] = useState(false);
+  const bg = plan.featured ? "linear-gradient(160deg,rgba(37,99,235,0.18),"+surface+" 60%)" : surface;
+  const bord = plan.featured ? "rgba(37,99,235,0.4)" : hov ? "rgba(37,99,235,0.25)" : border;
+  return (
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{ background:bg, border:"1px solid "+bord, borderRadius:20, padding:36, position:"relative", overflow:"hidden", transition:"all 0.3s", transform: hov ? "translateY(-6px)" : "none", boxShadow: hov ? "0 24px 60px rgba(0,0,0,0.4)" : "none" }}>
+      {plan.featured && <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,"+blue+",transparent)" }}/>}
+      <div style={{ display:"inline-block", fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:plan.tagCol, background:plan.tagCol+"20", border:"1px solid "+plan.tagCol+"40", borderRadius:100, padding:"4px 12px", marginBottom:20 }}>{plan.tag}</div>
+      <h3 style={{ fontSize:20, fontWeight:800, marginBottom:6 }}>{plan.name}</h3>
+      <p style={{ fontSize:13, color:muted, marginBottom:20, lineHeight:1.6, fontWeight:300 }}>{plan.desc}</p>
+      <div style={{ marginBottom: plan.monthly ? 4 : 24 }}>
+        <span style={{ fontFamily:disp, fontSize:44, fontWeight:900, letterSpacing:"-0.04em" }}>{plan.price}</span>
+        <span style={{ fontSize:14, color:muted, marginLeft:6 }}>{plan.period}</span>
+      </div>
+      {plan.monthly && <div style={{ fontSize:13, color:muted, marginBottom:24 }}>then <strong style={{ color:white }}>{plan.monthly}</strong> ongoing</div>}
+      <div style={{ borderTop:"1px solid "+border, paddingTop:20, marginBottom:24 }}>
+        <ul style={{ listStyle:"none", display:"flex", flexDirection:"column", gap:10 }}>
+          {plan.feats.map((f,i)=><li key={i} style={{ display:"flex", alignItems:"center", gap:10, fontSize:13, color:"rgba(255,255,255,0.75)" }}><Check col={plan.featured ? blueL : green}/> {f}</li>)}
+        </ul>
+      </div>
+      <button onClick={()=>document.getElementById("contact")&&document.getElementById("contact").scrollIntoView({behavior:"smooth"})}
+        style={{ width:"100%", background: plan.featured ? blue : "transparent", color:white, border:"1px solid "+(plan.featured?blue:border), borderRadius:10, padding:"13px", fontSize:14, fontWeight:700, fontFamily:body, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all 0.2s" }}>
+        {plan.cta} <Arrow/>
+      </button>
+    </div>
+  );
+}
+
+function Testimonials() {
+  const testi = [
+    {init:"MJ",col:"#1D4ED8",name:"Marcus J.",role:"Owner — Elite Cuts Barbershop",text:"After working with Vantage Flow, we started getting significantly more bookings within weeks. The automated reminders alone cut our no-shows in half."},
+    {init:"SP",col:"#7C3AED",name:"Sarah P.",role:"Director — Bloom Beauty Salon",text:"The booking system paid for itself in the first month. No more missed DMs or unanswered calls — clients just book themselves while we work."},
+    {init:"DK",col:"#0F766E",name:"Dr. D. Khan",role:"Principal — ClearSmile Dental",text:"We went from 15 new patients a month to consistently over 40. The chatbot handles enquiries we used to reply to manually. Remarkable ROI."},
+  ];
+  return (
+    <section style={{ padding:"110px 0", background:surface }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <SectionHeader tag="Client Stories" center={true} title="Businesses Already Running on Vantage Flow" sub="Real feedback from business owners who chose to stop leaving money on the table." maxWidth={560}/>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
+          {testi.map((t,i)=>(
+            <Reveal delay={i*0.1} key={i}>
+              <div style={{ background:ink, border:"1px solid "+border, borderRadius:20, padding:36, position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:16, right:24, fontFamily:"Georgia,serif", fontSize:90, color:"rgba(37,99,235,0.08)", lineHeight:1, userSelect:"none" }}>"</div>
+                <div style={{ display:"flex", gap:3, marginBottom:18 }}>{[0,1,2,3,4].map(i=><span key={i} style={{ color:"#F59E0B", fontSize:15 }}>★</span>)}</div>
+                <p style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.8, fontStyle:"italic", marginBottom:24, fontWeight:300 }}>"{t.text}"</p>
+                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:42, height:42, borderRadius:10, background:t.col, display:"grid", placeItems:"center", fontFamily:disp, fontSize:14, fontWeight:900, flexShrink:0 }}>{t.init}</div>
+                  <div><div style={{ fontSize:14, fontWeight:700 }}>{t.name}</div><div style={{ fontSize:12, color:muted, marginTop:2 }}>{t.role}</div></div>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={0.3}>
+          <div style={{ marginTop:56, background:ink, border:"1px solid "+border, borderRadius:20, padding:40, display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:24 }}>
+            {[["+247%","Avg. booking increase"],["48hr","Delivery time"],["60%","No-show reduction"],["4.9★","Client rating"]].map(([v,l],i)=>(
+              <div key={i} style={{ textAlign:"center", borderRight: i<3 ? "1px solid "+border : "none" }}>
+                <div style={{ fontFamily:disp, fontSize:"clamp(30px,3vw,44px)", fontWeight:900, letterSpacing:"-0.03em", color:blueL }}>{v}</div>
+                <div style={{ fontSize:13, color:muted, marginTop:6 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function FinalCTA({ go }) {
+  return (
+    <section style={{ padding:"110px 0", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 70% 60% at 50% 50%, rgba(37,99,235,0.1), transparent)" }}/>
+      <div style={{ maxWidth:800, margin:"0 auto", padding:"0 32px", textAlign:"center", position:"relative", zIndex:2 }}>
+        <Reveal><Tag>Ready to Grow?</Tag></Reveal>
+        <Reveal delay={0.1}><h2 style={{ fontFamily:disp, fontSize:"clamp(38px,5vw,64px)", fontWeight:900, letterSpacing:"-0.03em", lineHeight:1.06, marginBottom:20 }}>Ready to Turn Your Website Into a <span style={{ color:blueL, fontStyle:"italic" }}>Client Machine?</span></h2></Reveal>
+        <Reveal delay={0.2}><p style={{ fontSize:18, color:muted, lineHeight:1.75, marginBottom:40, fontWeight:300 }}>Let's build you a system that works 24/7 — capturing leads, booking clients, and generating revenue while you focus on what you do best.</p></Reveal>
+        <Reveal delay={0.3}>
+          <div style={{ display:"flex", gap:14, justifyContent:"center", flexWrap:"wrap" }}>
+            <Btn onClick={()=>document.getElementById("contact")&&document.getElementById("contact").scrollIntoView({behavior:"smooth"})}>Book a Call Today <Arrow/></Btn>
+            <Btn variant="ghost" onClick={()=>go("pricing")}>View Pricing</Btn>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function Contact() {
+  const [form, setForm] = useState({ name:"", email:"", business:"", message:"" });
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const upd = k => e => setForm(p => Object.assign({}, p, {[k]: e.target.value}));
+  const sub = () => {
+    if (!form.name || !form.email || !form.business) return;
+    setLoading(true);
+    setTimeout(()=>{ setLoading(false); setSent(true); }, 1400);
+  };
+  const iStyle = { background:surf2, border:"1px solid "+border, borderRadius:10, padding:"13px 16px", fontSize:15, color:white, outline:"none", width:"100%", fontFamily:body, transition:"border-color 0.2s" };
+  return (
+    <section id="contact" style={{ padding:"110px 0", background:surface }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"start" }}>
+          <div>
+            <Reveal><Tag>Lets Talk</Tag></Reveal>
+            <Reveal delay={0.1}><h2 style={{ fontFamily:disp, fontSize:"clamp(32px,3.5vw,48px)", fontWeight:900, letterSpacing:"-0.03em", lineHeight:1.08, marginBottom:16 }}>Start with a Free Demo — No Risk</h2></Reveal>
+            <Reveal delay={0.2}><p style={{ fontSize:17, color:muted, lineHeight:1.75, marginBottom:36, fontWeight:300 }}>Fill in the form and we'll get back to you within 2 hours with your free homepage demo and a clear plan.</p></Reveal>
+            <Reveal delay={0.3}>
+              <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:36 }}>
+                {["Free homepage demo built for your business","Response within 2 hours","No hard sell — honest conversation","100% satisfaction guarantee"].map((p,i)=>(
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:12, fontSize:14, color:"rgba(255,255,255,0.8)" }}><Check/> {p}</div>
+                ))}
+              </div>
+            </Reveal>
+            <Reveal delay={0.4}>
+              <div style={{ background:ink, border:"1px solid "+border, borderRadius:14, padding:24 }}>
+                <div style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:muted, marginBottom:12 }}>Or contact us directly</div>
+                <a href="mailto:vantageflowa@gmail.com" style={{ display:"flex", alignItems:"center", gap:10, color:white, textDecoration:"none", fontSize:15, fontWeight:600 }}>
+                  <div style={{ width:36, height:36, borderRadius:8, background:blueDim, border:"1px solid rgba(37,99,235,0.2)", display:"grid", placeItems:"center", fontSize:16 }}>✉️</div>
+                  vantageflowa@gmail.com
+                </a>
+              </div>
+            </Reveal>
+          </div>
+          <Reveal delay={0.2}>
+            <div style={{ background:ink, border:"1px solid "+border, borderRadius:24, padding:44, position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", top:0, left:"15%", right:"15%", height:2, background:"linear-gradient(90deg,transparent,"+blue+",transparent)" }}/>
+              {!sent ? (
+                <div>
+                  <h3 style={{ fontSize:20, fontWeight:800, marginBottom:6 }}>Request a Free Demo</h3>
+                  <p style={{ fontSize:13, color:muted, marginBottom:28 }}>We'll get back to you within 2 hours.</p>
+                  {[{label:"Your Name",key:"name",ph:"John Smith",type:"text"},{label:"Email Address",key:"email",ph:"john@yourbusiness.com",type:"email"},{label:"Business Name",key:"business",ph:"e.g. Elite Cuts Barbershop",type:"text"}].map(f=>(
+                    <div key={f.key} style={{ marginBottom:16 }}>
+                      <label style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.6)", letterSpacing:"0.05em", display:"block", marginBottom:7 }}>{f.label}</label>
+                      <input type={f.type} placeholder={f.ph} value={form[f.key]} onChange={upd(f.key)} style={iStyle}
+                        onFocus={e=>{ e.target.style.borderColor=blue; e.target.style.boxShadow="0 0 0 3px "+blueDim; }}
+                        onBlur={e=>{ e.target.style.borderColor=""; e.target.style.boxShadow=""; }}/>
+                    </div>
+                  ))}
+                  <div style={{ marginBottom:20 }}>
+                    <label style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.6)", letterSpacing:"0.05em", display:"block", marginBottom:7 }}>Your Goal</label>
+                    <textarea placeholder="e.g. I want more online bookings..." value={form.message} onChange={upd("message")}
+                      style={Object.assign({}, iStyle, { resize:"vertical", minHeight:100 })}
+                      onFocus={e=>{ e.target.style.borderColor=blue; }}
+                      onBlur={e=>{ e.target.style.borderColor=""; }}/>
+                  </div>
+                  <button onClick={sub} disabled={loading}
+                    style={{ width:"100%", background: loading ? surf2 : blue, color:white, border:"none", borderRadius:10, padding:"15px", fontSize:15, fontWeight:700, fontFamily:body, cursor: loading?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, transition:"all 0.25s" }}>
+                    {loading ? (
+                      <span>
+                        <span style={{ width:16, height:16, border:"2px solid rgba(255,255,255,0.3)", borderTopColor:white, borderRadius:"50%", animation:"spin 0.7s linear infinite", display:"inline-block", marginRight:8 }}/>
+                        Sending...
+                      </span>
+                    ) : <span style={{ display:"flex", alignItems:"center", gap:10 }}>Send My Free Demo Request <Arrow/></span>}
+                  </button>
+                  <p style={{ fontSize:11, color:muted, textAlign:"center", marginTop:12 }}>Your information stays private and is never shared.</p>
+                </div>
+              ) : (
+                <div style={{ textAlign:"center", padding:"20px 0" }}>
+                  <div style={{ width:64, height:64, borderRadius:16, background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.3)", display:"grid", placeItems:"center", margin:"0 auto 20px", fontSize:28 }}>✅</div>
+                  <h3 style={{ fontFamily:disp, fontSize:26, fontWeight:900, marginBottom:12 }}>You're all set!</h3>
+                  <p style={{ fontSize:15, color:muted, lineHeight:1.75 }}>We'll reach out within 2 hours to <strong style={{ color:white }}>{form.email}</strong>.</p>
+                </div>
+              )}
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* EXTRA PAGES */
+function ServicesPage() {
+  const svcs = [
+    {icon:"🖥️",title:"High-Converting Website Design",tl:"Websites built to book clients, not just look good.",body:"Most websites are digital brochures. Ours are revenue engines. Every decision is made to turn visitors into booked clients.",inc:["Custom multi-page design","Mobile-first development","Sub-1s load speed","Conversion layout","SEO-ready structure","Analytics setup"]},
+    {icon:"📆",title:"Booking System Integration",tl:"Let clients book 24/7 — zero manual effort.",body:"We integrate seamless scheduling that works around the clock, synced with your calendar, automatically confirming and reminding clients.",inc:["24/7 online booking","Calendar integration","Automated confirmations","Appointment reminders","No-show follow-ups","Mobile booking"]},
+    {icon:"🤖",title:"Automation and Lead Capture",tl:"Your business on autopilot — even at 2am.",body:"We build flows that catch every lead, follow up automatically, and bring cold prospects back to book when they're ready.",inc:["AI chatbot responses","Lead capture forms","Email automation","SMS follow-ups","Re-engagement campaigns","Monthly reports"]},
+  ];
+  return (
+    <div style={{ paddingTop:100, animation:"fadeIn 0.4s ease" }}>
+      <section style={{ padding:"80px 0 60px" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+          <SectionHeader tag="Our Services" title="Everything You Need to Go From Invisible to Fully Booked" sub="Three interlocking systems that create a consistent pipeline of clients." maxWidth={680}/>
+        </div>
+      </section>
+      {svcs.map((s,i)=>(
+        <section key={i} style={{ padding:"60px 0", background: i%2===0 ? surface : ink }}>
+          <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:60, alignItems:"center" }}>
+              {i%2!==0 && (
+                <Reveal delay={0.1}>
+                  <div style={{ background:surf2, border:"1px solid "+border, borderRadius:20, padding:40, textAlign:"center" }}>
+                    <div style={{ fontSize:60, marginBottom:16, animation:"floatY 4s ease-in-out infinite" }}>{s.icon}</div>
+                    <div style={{ fontFamily:disp, fontSize:80, fontWeight:900, color:"rgba(37,99,235,0.08)" }}>0{i+1}</div>
+                  </div>
+                </Reveal>
+              )}
+              <Reveal>
+                <div>
+                  <div style={{ fontSize:36, marginBottom:12 }}>{s.icon}</div>
+                  <h2 style={{ fontFamily:disp, fontSize:"clamp(28px,3vw,42px)", fontWeight:900, letterSpacing:"-0.02em", marginBottom:10 }}>{s.title}</h2>
+                  <p style={{ fontSize:17, color:blueL, fontWeight:600, marginBottom:20 }}>{s.tl}</p>
+                  <p style={{ fontSize:16, color:muted, lineHeight:1.8, marginBottom:28, fontWeight:300 }}>{s.body}</p>
+                  <ul style={{ listStyle:"none", display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    {s.inc.map((f,j)=><li key={j} style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"rgba(255,255,255,0.75)" }}><Check col={blueL}/> {f}</li>)}
+                  </ul>
+                </div>
+              </Reveal>
+              {i%2===0 && (
+                <Reveal delay={0.2}>
+                  <div style={{ background:surf2, border:"1px solid "+border, borderRadius:20, padding:40, textAlign:"center" }}>
+                    <div style={{ fontSize:60, marginBottom:16, animation:"floatY 4s ease-in-out infinite" }}>{s.icon}</div>
+                    <div style={{ fontFamily:disp, fontSize:80, fontWeight:900, color:"rgba(37,99,235,0.08)" }}>0{i+1}</div>
+                  </div>
+                </Reveal>
+              )}
+            </div>
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function AboutPage() {
+  return (
+    <div style={{ paddingTop:100, animation:"fadeIn 0.4s ease" }}>
+      <section style={{ padding:"80px 0 60px" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center" }}>
+            <div>
+              <Reveal><Tag>About Us</Tag></Reveal>
+              <Reveal delay={0.1}><h1 style={{ fontFamily:disp, fontSize:"clamp(36px,4vw,58px)", fontWeight:900, letterSpacing:"-0.03em", lineHeight:1.06, marginBottom:20 }}>We're Not a Web Agency.<br/><span style={{ color:blueL, fontStyle:"italic" }}>We're a Growth Partner.</span></h1></Reveal>
+              <Reveal delay={0.2}><p style={{ fontSize:17, color:muted, lineHeight:1.8, marginBottom:20, fontWeight:300 }}>Vantage Flow was built because we saw the same problem repeatedly: great local businesses held back by outdated websites costing them clients every single day.</p></Reveal>
+              <Reveal delay={0.3}><p style={{ fontSize:17, color:muted, lineHeight:1.8, fontWeight:300 }}>We specialise exclusively in local service businesses — which means we understand your audience and exactly what it takes to convert a visitor into a loyal client.</p></Reveal>
+            </div>
+            <Reveal delay={0.2}>
+              <div style={{ background:surface, border:"1px solid "+border, borderRadius:20, padding:40 }}>
+                <div style={{ fontFamily:disp, fontSize:20, fontWeight:900, marginBottom:24, color:blueL, lineHeight:1.4 }}>"We don't just build websites — we build client acquisition systems."</div>
+                {[["Founded","2024"],["Clients Served","40+"],["Avg. Booking Increase","3x"],["Satisfaction Rate","100%"]].map(([l,v],i)=>(
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"14px 0", borderBottom: i<3 ? "1px solid "+border : "none", fontSize:15 }}>
+                    <span style={{ color:muted }}>{l}</span><span style={{ fontWeight:700 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+      <section style={{ padding:"80px 0", background:surface }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+          <SectionHeader tag="Our Values" title="What Drives Everything We Build" maxWidth={560}/>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
+            {[{icon:"🎯",title:"Results Over Aesthetics",body:"Beautiful design means nothing if it doesn't convert. Every decision is based on tested conversion principles."},{icon:"🤝",title:"Total Transparency",body:"No hidden fees, no jargon, no vague timelines. You always know exactly what we're building and when."},{icon:"⚡",title:"Speed Without Sacrifice",body:"48-hour delivery proves we respect your time. Every day without a working system is a day you're losing clients."}].map((v,i)=>(
+              <Reveal delay={i*0.1} key={i}>
+                <Card extraStyle={{ padding:36 }}>
+                  <div style={{ fontSize:28, marginBottom:16 }}>{v.icon}</div>
+                  <h3 style={{ fontSize:18, fontWeight:700, marginBottom:10 }}>{v.title}</h3>
+                  <p style={{ fontSize:14, color:muted, lineHeight:1.75, fontWeight:300 }}>{v.body}</p>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PricingPage() {
+  const [open, setOpen] = useState(null);
+  const faqs = [
+    ["How does payment work?","All projects require 50% upfront and 50% on completion. Simple and fair."],
+    ["What if I'm not happy?","You don't pay. We build your free demo first — you only proceed if you're genuinely happy."],
+    ["How quickly can you deliver?","Most projects live within 48 hours. Complex ones may take 3-5 days — we'll always give a clear timeline."],
+    ["What's in the monthly retainer?","Updates, booking system management, support, and continuous improvements."],
+    ["What businesses do you work with?","Barbershops, salons, restaurants, gyms, dental practices, physio clinics, tattoo studios, and more."],
+  ];
+  return (
+    <div style={{ paddingTop:100, animation:"fadeIn 0.4s ease" }}>
+      <section style={{ padding:"80px 0 0" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+          <SectionHeader tag="Pricing" center={true} title="Honest Pricing. No Surprises." sub="Pay when you're happy. Every plan starts with a risk-free demo." maxWidth={560}/>
+        </div>
+      </section>
+      <Pricing/>
+      <section style={{ padding:"80px 0", background:surface }}>
+        <div style={{ maxWidth:900, margin:"0 auto", padding:"0 32px" }}>
+          <SectionHeader tag="FAQ" center={true} title="Common Questions" maxWidth={500}/>
+          {faqs.map(([q,a],i)=>(
+            <Reveal delay={i*0.08} key={i}>
+              <div onClick={()=>setOpen(open===i?null:i)} style={{ background: open===i ? surface : ink, border:"1px solid "+(open===i?"rgba(37,99,235,0.3)":border), borderRadius:12, padding:"20px 24px", cursor:"pointer", transition:"all 0.25s", marginBottom:2 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:15, fontWeight:600 }}>{q}</span>
+                  <span style={{ fontSize:18, color:blueL, transform: open===i?"rotate(45deg)":"none", transition:"transform 0.25s" }}>+</span>
+                </div>
+                {open===i && <p style={{ fontSize:14, color:muted, lineHeight:1.75, marginTop:14, fontWeight:300 }}>{a}</p>}
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* CHAT */
+function Chat() {
+  const [open, setOpen] = useState(false);
+  const [msgs, setMsgs] = useState([{f:"bot",t:"Hey! I'm the Vantage Flow assistant. How can I help?"}]);
+  const [inp, setInp] = useState("");
+  const [typing, setTyping] = useState(false);
+  const endRef = useRef(null);
+  const replies = {
+    price:"Plans start at £400 one-time (Starter), £600+£75/mo (Growth), £800+£150/mo (Pro). Plus a free demo first!",
+    book:"We integrate booking systems for 24/7 client booking — automated confirmations and reminders included!",
+    demo:"Fill out the contact form and we'll build your free homepage demo within 2 hours. No commitment needed.",
+    time:"Most projects are live within 48 hours of kickoff.",
+    def:"Email us at vantageflowa@gmail.com or fill out the contact form — we respond within 2 hours.",
+  };
+  const send = () => {
+    if (!inp.trim()) return;
+    const m = inp.toLowerCase();
+    setMsgs(p=>[...p,{f:"user",t:inp}]); setInp(""); setTyping(true);
+    const r = m.includes("pric")||m.includes("cost")||m.includes("£")?replies.price:m.includes("book")?replies.book:m.includes("demo")||m.includes("free")?replies.demo:m.includes("time")||m.includes("48")?replies.time:replies.def;
+    setTimeout(()=>{ setTyping(false); setMsgs(p=>[...p,{f:"bot",t:r}]); },1200);
+  };
+  useEffect(()=>{ endRef.current&&endRef.current.scrollIntoView({behavior:"smooth"}); },[msgs,typing]);
+  return (
+    <div style={{ position:"fixed", bottom:28, right:28, zIndex:999 }}>
+      {open && (
+        <div style={{ width:320, background:surface, border:"1px solid "+border, borderRadius:20, boxShadow:"0 24px 60px rgba(0,0,0,0.6)", animation:"scaleIn 0.25s ease", transformOrigin:"bottom right", marginBottom:12, overflow:"hidden" }}>
+          <div style={{ background:"linear-gradient(135deg,"+blue+",#1D4ED8)", padding:"16px 20px", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:"rgba(255,255,255,0.2)", display:"grid", placeItems:"center", fontSize:18 }}>🤖</div>
+            <div><div style={{ fontSize:14, fontWeight:700 }}>Vantage Flow</div><div style={{ fontSize:11, opacity:0.8 }}>Online now</div></div>
+            <button onClick={()=>setOpen(false)} style={{ marginLeft:"auto", background:"none", border:"none", color:white, fontSize:20, cursor:"pointer" }}>×</button>
+          </div>
+          <div style={{ height:240, overflowY:"auto", padding:"16px", display:"flex", flexDirection:"column", gap:10 }}>
+            {msgs.map((m,i)=>(
+              <div key={i} style={{ display:"flex", justifyContent: m.f==="user"?"flex-end":"flex-start" }}>
+                <div style={{ maxWidth:"80%", background: m.f==="user"?blue:surf2, borderRadius: m.f==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px", padding:"10px 14px", fontSize:13, lineHeight:1.6 }}>{m.t}</div>
+              </div>
+            ))}
+            {typing && (
+              <div style={{ display:"flex" }}>
+                <div style={{ background:surf2, borderRadius:"12px 12px 12px 4px", padding:"12px 16px", display:"flex", gap:5 }}>
+                  {[0,1,2].map(i=><span key={i} style={{ width:6, height:6, borderRadius:"50%", background:muted, animation:"pulse 1.2s "+(i*0.2)+"s ease-in-out infinite", display:"block" }}/>)}
+                </div>
+              </div>
+            )}
+            <div ref={endRef}/>
+          </div>
+          <div style={{ padding:"12px 16px", borderTop:"1px solid "+border, display:"flex", gap:10 }}>
+            <input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Ask anything..."
+              style={{ flex:1, background:surf2, border:"1px solid "+border, borderRadius:8, padding:"10px 14px", fontSize:13, color:white, outline:"none", fontFamily:body }}/>
+            <button onClick={send} style={{ background:blue, border:"none", borderRadius:8, width:36, height:36, display:"grid", placeItems:"center", cursor:"pointer" }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="13" x2="13" y2="1"/><polyline points="13 1 3 1 13 11"/></svg>
+            </button>
+          </div>
+          <div style={{ padding:"8px 16px 12px", fontSize:11, color:muted, textAlign:"center" }}>
+            Or email <a href="mailto:vantageflowa@gmail.com" style={{ color:blueL, textDecoration:"none" }}>vantageflowa@gmail.com</a>
+          </div>
+        </div>
+      )}
+      <button onClick={()=>setOpen(!open)} style={{ width:56, height:56, borderRadius:16, background: open?surf2:blue, border:"1px solid "+(open?border:"transparent"), display:"grid", placeItems:"center", cursor:"pointer", boxShadow:"0 8px 28px "+blueGlow, transition:"all 0.25s", fontSize:22 }}>
+        {open ? "×" : "💬"}
+      </button>
+      {!open && <div style={{ position:"absolute", top:-8, right:-6, width:18, height:18, borderRadius:"50%", background:"#EF4444", border:"2px solid "+ink, display:"grid", placeItems:"center", fontSize:10, fontWeight:700 }}>1</div>}
+    </div>
+  );
+}
+
+/* POPUP */
+function Popup() {
+  const [vis, setVis] = useState(false);
+  const [dis, setDis] = useState(false);
+  const [em, setEm] = useState("");
+  const [done, setDone] = useState(false);
+  useEffect(()=>{ if(dis) return; const t=setTimeout(()=>setVis(true),5000); return()=>clearTimeout(t); },[dis]);
+  if (!vis||dis) return null;
+  const close = () => { setVis(false); setDis(true); };
+  const sub = () => { if(!em) return; setDone(true); setTimeout(close,2000); };
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:1100, display:"grid", placeItems:"center", animation:"fadeIn 0.3s ease", backdropFilter:"blur(4px)" }} onClick={close}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:surface, border:"1px solid rgba(37,99,235,0.3)", borderRadius:24, padding:48, maxWidth:460, width:"90%", position:"relative", animation:"scaleIn 0.3s ease", textAlign:"center", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:0, left:"15%", right:"15%", height:2, background:"linear-gradient(90deg,transparent,"+blue+",transparent)" }}/>
+        <button onClick={close} style={{ position:"absolute", top:16, right:16, background:"none", border:"none", color:muted, fontSize:20, cursor:"pointer" }}>×</button>
+        {!done ? (
+          <div>
+            <div style={{ fontSize:40, marginBottom:16 }}>🎁</div>
+            <h3 style={{ fontFamily:disp, fontSize:26, fontWeight:900, marginBottom:10 }}>Get Your Free Website Audit</h3>
+            <p style={{ fontSize:14, color:muted, lineHeight:1.7, marginBottom:28, fontWeight:300 }}>Enter your email and we'll send you a free audit showing exactly what's costing you bookings.</p>
+            <div style={{ display:"flex", gap:10 }}>
+              <input type="email" placeholder="your@email.com" value={em} onChange={e=>setEm(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sub()}
+                style={{ flex:1, background:surf2, border:"1px solid "+border, borderRadius:10, padding:"12px 16px", fontSize:14, color:white, outline:"none", fontFamily:body }}
+                onFocus={e=>e.target.style.borderColor=blue} onBlur={e=>e.target.style.borderColor=""}/>
+              <button onClick={sub} style={{ background:blue, color:white, border:"none", borderRadius:10, padding:"12px 18px", fontSize:14, fontWeight:700, fontFamily:body, cursor:"pointer" }}>Get Audit</button>
+            </div>
+            <p style={{ fontSize:11, color:muted, marginTop:14 }}>No spam. Response within 2 hours.</p>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize:40, marginBottom:16 }}>✅</div>
+            <h3 style={{ fontFamily:disp, fontSize:22, fontWeight:900, marginBottom:8 }}>You're in!</h3>
+            <p style={{ fontSize:14, color:muted }}>We'll send your audit to <strong style={{ color:white }}>{em}</strong> within 2 hours.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* FOOTER */
+function Footer({ go }) {
+  return (
+    <footer style={{ borderTop:"1px solid "+border, padding:"48px 0" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 32px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:40, marginBottom:40, paddingBottom:40, borderBottom:"1px solid "+border }}>
+          <div>
+            <button onClick={()=>go("home")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:10, marginBottom:16, padding:0 }}>
+              <div style={{ width:30, height:30, background:blue, borderRadius:7, display:"grid", placeItems:"center" }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="1.2"/><path d="M5 8L7 10L11 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <span style={{ fontFamily:body, fontSize:17, fontWeight:800, color:white }}>Vantage<span style={{ color:blue }}>Flow</span></span>
+            </button>
+            <p style={{ fontSize:13, color:muted, lineHeight:1.75, maxWidth:240, fontWeight:300 }}>We build client acquisition systems for local service businesses.</p>
+            <a href="mailto:vantageflowa@gmail.com" style={{ fontSize:13, color:blueL, textDecoration:"none", display:"block", marginTop:12 }}>vantageflowa@gmail.com</a>
+          </div>
+          {[["Company",[["About","about"],["Services","services"],["Pricing","pricing"]]],["Services",[["Web Design","services"],["Booking Systems","services"],["Automation","services"]]],["Start",[["Free Demo",null],["Book a Call",null],["Contact",null]]]].map(([label,links],i)=>(
+            <div key={i}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:muted, marginBottom:16 }}>{label}</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                {links.map(([t,k],j)=>(
+                  <button key={j} onClick={()=>{ if(k){ go(k); window.scrollTo(0,0); } else { go("home"); setTimeout(()=>document.getElementById("contact")&&document.getElementById("contact").scrollIntoView({behavior:"smooth"}),100); } }}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:muted, fontSize:13, textAlign:"left", padding:0, fontFamily:body, transition:"color 0.2s" }}
+                    onMouseOver={e=>e.target.style.color=white} onMouseOut={e=>e.target.style.color=muted}>{t}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+          <p style={{ fontSize:12, color:"rgba(255,255,255,0.25)" }}>2025 VantageFlow. All rights reserved.</p>
+          <p style={{ fontSize:12, color:"rgba(255,255,255,0.25)" }}>Built for local businesses that deserve better.</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* HOME */
+function Home({ go }) {
+  return (
+    <div style={{ animation:"fadeIn 0.4s ease" }}>
+      <Hero go={go}/>
+      <TrustStrip/>
+      <Problem/>
+      <Solution go={go}/>
+      <HowItWorks/>
+      <Results/>
+      <Offer/>
+      <Pricing/>
+      <Testimonials/>
+      <FinalCTA go={go}/>
+      <Contact/>
+    </div>
+  );
+}
+
+/* APP */
+function App() {
+  const [page, setPage] = useState("home");
+  const go = useCallback(p => { setPage(p); window.scrollTo({ top:0, behavior:"smooth" }); }, []);
+  const pages = { home:<Home go={go}/>, services:<ServicesPage/>, about:<AboutPage/>, pricing:<PricingPage/> };
+  return (
+    <div>
+      <Nav page={page} go={go}/>
+      <main style={{ minHeight:"100vh" }}>{pages[page] || pages.home}</main>
+      <Footer go={go}/>
+      <Chat/>
+      <Popup/>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+</script>
+</body>
+</html>
