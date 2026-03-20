@@ -178,7 +178,7 @@ function Nav({ page, go }) {
         {navLinks.map(([l,k])=>(
           <button key={k} onClick={()=>go(k)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, fontWeight:500, fontFamily:bod, color: page===k ? wh : mu, transition:"color 0.2s" }}>{l}</button>
         ))}
-        <button onClick={()=>{ go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },100); }}
+        <button onClick={()=>{ go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },300); }}
           style={{ background:blue, color:wh, border:"none", borderRadius:8, padding:"10px 18px", fontSize:14, fontWeight:700, fontFamily:bod, cursor:"pointer" }}>
           Get a Free Demo
         </button>
@@ -243,7 +243,7 @@ function Hero({ go }) {
             </Reveal>
             <Reveal delay={0.4}>
               <div style={{ display:"flex", gap:14, flexWrap:"wrap", marginBottom:20 }}>
-                <Btn onClick={()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); }}>Get a Free Demo <Arrow/></Btn>
+                <Btn onClick={()=>{ go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },300); }}>Get a Free Demo <Arrow/></Btn>
                 <Btn variant="ghost" onClick={()=>go("pricing")}>View Pricing</Btn>
               </div>
             </Reveal>
@@ -504,7 +504,7 @@ function Offer() {
                 {perks.map((p,i)=><div key={i} style={{ display:"flex", alignItems:"center", gap:12, fontSize:14, color:"rgba(255,255,255,0.85)" }}><Check/> {p}</div>)}
               </div>
             </Reveal>
-            <Reveal delay={0.4}><Btn onClick={()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); }}>Claim Your Free Demo <Arrow/></Btn></Reveal>
+            <Reveal delay={0.4}><Btn onClick={()=>{ go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },300); }}>Claim Your Free Demo <Arrow/></Btn></Reveal>
           </div>
           <Reveal delay={0.2}>
             <div style={{ background:ink, border:"1px solid rgba(37,99,235,0.25)", borderRadius:20, padding:36, position:"relative", overflow:"hidden" }}>
@@ -614,7 +614,7 @@ function PricingCard({ plan }) {
           {plan.feats.map((f,i)=><li key={i} style={{ display:"flex", alignItems:"center", gap:9, fontSize:13, color:"rgba(255,255,255,0.75)" }}><Check col={plan.featured?blueL:grn}/> {f}</li>)}
         </ul>
       </div>
-      <button onClick={()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); }}
+      <button onClick={()=>{ go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },300); }}
         style={{ width:"100%", background: plan.featured ? blue : "transparent", color:wh, border:"1px solid "+(plan.featured?blue:bord), borderRadius:10, padding:"12px", fontSize:14, fontWeight:700, fontFamily:bod, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all 0.2s" }}>
         {plan.cta} <Arrow/>
       </button>
@@ -676,7 +676,7 @@ function FinalCTA({ go }) {
         <Reveal delay={0.2}><p style={{ fontSize:17, color:mu, lineHeight:1.75, marginBottom:36, fontWeight:300 }}>We're taking on a limited number of businesses right now — which means you'll get direct attention, a fast build, and a system that's genuinely built around you.</p></Reveal>
         <Reveal delay={0.3}>
           <div style={{ display:"flex", gap:14, justifyContent:"center", flexWrap:"wrap" }}>
-            <Btn onClick={()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); }}>Book a Call Today <Arrow/></Btn>
+            <Btn onClick={()=>{ go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },300); }}>Book a Call Today <Arrow/></Btn>
             <Btn variant="ghost" onClick={()=>go("pricing")}>View Pricing</Btn>
           </div>
         </Reveal>
@@ -1037,7 +1037,7 @@ function Footer({ go }) {
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:mu, marginBottom:14 }}>{label}</div>
               <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
                 {links.map(([t,k],j)=>(
-                  <button key={j} onClick={()=>{ if(k){ go(k); window.scrollTo(0,0); } else { go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },100); } }}
+                  <button key={j} onClick={()=>{ if(k){ go(k); window.scrollTo(0,0); } else { go("home"); setTimeout(()=>{ const el=document.getElementById("contact"); el&&el.scrollIntoView({behavior:"smooth"}); },300); } }}
                     style={{ background:"none", border:"none", cursor:"pointer", color:mu, fontSize:13, textAlign:"left", padding:0, fontFamily:bod, transition:"color 0.2s" }}
                     onMouseOver={e=>e.target.style.color=wh} onMouseOut={e=>e.target.style.color=mu}>{t}</button>
                 ))}
